@@ -1,5 +1,14 @@
 // content/text-actions.tsx
 import {
+  IconAsk,
+  IconClose,
+  IconCopy,
+  IconRefactor,
+  IconReview,
+  IconSecurity,
+  IconTest
+} from "~components/helpers/icons"
+import {
   actionButtonBase,
   actionButtonGradient,
   actionButtonGradient2,
@@ -23,15 +32,10 @@ import {
   reviewCode,
   suggestRefactor
 } from "../handlers/handlers"
+import { isLikelyCode } from "~components/helpers/functionalHelpers"
 
-// --- Icons as SVG strings ---
-const IconCopy = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`
-const IconClose = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
-const IconReview = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14,2 14,8 20,8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10,9 9,9 8,9"></polyline></svg>`
-const IconSecurity = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`
-const IconRefactor = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`
-const IconTest = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14,2 14,8 20,8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10,9 9,9 8,9"></polyline></svg>`
-const IconAsk = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`
+// --- Smart Code Detection ---
+
 
 // --- Floating icon ---
 function createFloatingIcon(x: number, y: number, selectedText: string) {
@@ -40,31 +44,111 @@ function createFloatingIcon(x: number, y: number, selectedText: string) {
 
   const wrapper = document.createElement("div")
   wrapper.id = "insightlens-menu"
-  wrapper.style.cssText = menuWrapperStyle
-  wrapper.style.left = `${x}px`
-  wrapper.style.top = `${y}px`
+  wrapper.style.cssText = `
+    position: absolute;
+    z-index: 1000000;
+    pointer-events: auto;
+  `
+
+  // Position with transform for better centering
+  wrapper.style.left = "0"
+  wrapper.style.top = "0"
+  wrapper.style.transform = `translate(${x}px, ${y}px)`
 
   const icon = document.createElement("div")
   icon.innerHTML = "⚡"
-  icon.style.cssText = iconStyle
+  icon.style.cssText = `
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+    border: 2px solid white;
+    pointer-events: auto;
+    user-select: none;
+  `
   icon.title = "Code Review Actions"
+
+  // Add pulsing animation for better visibility
+  const pulseStyle = document.createElement("style")
+  pulseStyle.textContent = `
+    @keyframes insightlens-pulse {
+      0% { transform: scale(1); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+      50% { transform: scale(1.05); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); }
+      100% { transform: scale(1); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+    }
+  `
+  document.head.appendChild(pulseStyle)
+  icon.style.animation = "insightlens-pulse 2s ease-in-out"
 
   icon.addEventListener("click", (e) => {
     e.stopPropagation()
+    e.preventDefault()
     console.log("[InsightLens] Opening popup")
     openPopup(selectedText)
     removeExistingMenu()
   })
 
   icon.addEventListener("mouseenter", () => {
-    icon.style.cssText = iconStyle + iconHoverStyle
+    icon.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 50%;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      transform: scale(1.1);
+      transition: all 0.2s ease;
+      border: 2px solid white;
+      pointer-events: auto;
+      user-select: none;
+    `
   })
+
   icon.addEventListener("mouseleave", () => {
-    icon.style.cssText = iconStyle
+    icon.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 50%;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transform: scale(1);
+      transition: all 0.2s ease;
+      border: 2px solid white;
+      pointer-events: auto;
+      user-select: none;
+    `
   })
 
   wrapper.appendChild(icon)
   document.body.appendChild(wrapper)
+
+  // Add escape key handler specifically for this icon
+  const handleEscape = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      removeExistingMenu()
+      document.removeEventListener("keydown", handleEscape)
+    }
+  }
+  document.addEventListener("keydown", handleEscape)
 }
 
 // --- Popup UI ---
@@ -320,6 +404,108 @@ function removeExistingPopup() {
   document.getElementById("insightlens-popup")?.remove()
 }
 
+// --- Enhanced Selection Logic ---
+function attachSelectionLogic() {
+  console.log("[InsightLens] Initializing universal selection listeners")
+
+  let lastSelectionTime = 0
+
+  document.addEventListener("mouseup", (e) => {
+    // Ignore right clicks and very quick selections
+    if (e.button === 2 || Date.now() - lastSelectionTime < 100) {
+      return
+    }
+
+    setTimeout(() => {
+      const sel = window.getSelection()
+      const selectedText = sel?.toString().trim()
+
+      // Don't show if selection is too small or empty
+      if (!selectedText || selectedText.length < 10) {
+        removeExistingMenu()
+        return
+      }
+
+      // Smart code detection based on content
+      if (!isLikelyCode(selectedText)) {
+        removeExistingMenu()
+        return
+      }
+
+      const range = sel.getRangeAt(0)
+      const rect = range.getBoundingClientRect()
+
+      // Enhanced positioning logic
+      let x, y
+
+      // Check if selection rectangle is valid
+      if (rect.width === 0 && rect.height === 0) {
+        // Fallback: Use cursor position
+        x = e.clientX + window.scrollX + 10
+        y = e.clientY + window.scrollY - 30
+      } else {
+        // Use selection position with better handling
+        x = rect.right + window.scrollX + 10
+        y = rect.top + window.scrollY - 6
+      }
+
+      // Ensure the icon stays within viewport bounds
+      x = Math.min(window.innerWidth - 50, Math.max(10, x))
+      y = Math.min(window.innerHeight - 50, Math.max(10, y))
+
+      createFloatingIcon(x, y, selectedText)
+      lastSelectionTime = Date.now()
+    }, 50)
+  })
+
+  // Cleanup on scroll or click away
+  window.addEventListener("scroll", removeExistingMenu)
+  document.addEventListener("click", (e) => {
+    const menu = document.getElementById("insightlens-menu")
+    if (menu && !menu.contains(e.target as Node)) {
+      removeExistingMenu()
+    }
+  })
+
+  // Keyboard shortcuts
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      removeExistingMenu()
+      removeExistingPopup()
+    }
+
+    // Ctrl+Shift+R to trigger review on current selection
+    if (e.ctrlKey && e.shiftKey && e.key === "R") {
+      e.preventDefault()
+      const sel = window.getSelection()
+      const selectedText = sel?.toString().trim()
+
+      if (selectedText && selectedText.length >= 10) {
+        openPopup(selectedText)
+      }
+    }
+  })
+}
+
+// --- Context Menu Integration ---
+function setupContextMenu() {
+  // Listen for context menu on selections
+  document.addEventListener("contextmenu", (e) => {
+    const sel = window.getSelection()
+    const selectedText = sel?.toString().trim()
+
+    if (
+      selectedText &&
+      selectedText.length >= 10 &&
+      isLikelyCode(selectedText)
+    ) {
+      // We can't directly modify the context menu from content script,
+      // but we can store the selection for use in our context menu item
+      // This would need to be implemented in the background script
+    }
+  })
+}
+
 // --- DOM ready ---
 function waitForDOMReady(callback: () => void) {
   if (
@@ -332,54 +518,68 @@ function waitForDOMReady(callback: () => void) {
   }
 }
 
-// --- Selection logic ---
-function attachSelectionLogic() {
-  console.log("[InsightLens] Initializing selection listeners")
-
-  document.addEventListener("mouseup", () => {
-    setTimeout(() => {
-      const sel = window.getSelection()
-      const selectedText = sel?.toString().trim()
-
-      if (!selectedText || selectedText.length < 5) {
-        removeExistingMenu()
-        return
-      }
-
-      const node = sel?.anchorNode?.parentElement
-      const isCodeElement = node?.closest?.(
-        "pre, code, .hljs, .language-js, .language-ts, .language-python, .language-java, .language-cpp, .programming-language"
-      )
-
-      if (isCodeElement) {
-        const rect = sel.getRangeAt(0).getBoundingClientRect()
-        const x = Math.min(
-          window.innerWidth - 64,
-          rect.right + window.scrollX + 10
-        )
-        const y = Math.max(8, rect.top + window.scrollY - 6)
-        createFloatingIcon(x, y, selectedText)
-      } else {
-        removeExistingMenu()
-      }
-    }, 80)
-  })
-
-  window.addEventListener("scroll", removeExistingMenu)
-  document.addEventListener("click", (e) => {
-    const menu = document.getElementById("insightlens-menu")
-    if (menu && !menu.contains(e.target as Node)) removeExistingMenu()
-  })
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      removeExistingMenu()
-      removeExistingPopup()
-    }
-  })
-}
-
 // --- Run after DOM ready ---
 waitForDOMReady(() => {
-  console.log("[InsightLens] DOM ready - attaching selection listeners")
+  console.log(
+    "[InsightLens] DOM ready - attaching universal selection listeners"
+  )
   attachSelectionLogic()
+  setupContextMenu()
+
+  // Add global styles for consistent appearance
+  const globalStyles = document.createElement("style")
+  globalStyles.textContent = `
+    #insightlens-menu, #insightlens-popup {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      z-index: 1000000;
+    }
+    
+    #insightlens-popup {
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+  `
+  document.head.appendChild(globalStyles)
 })
+
+// Add this to the end of your waitForDOMReady function
+const globalStyles = document.createElement("style")
+globalStyles.textContent = `
+  #insightlens-menu {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    z-index: 1000000;
+    pointer-events: none;
+  }
+  
+  #insightlens-menu > div {
+    pointer-events: auto;
+  }
+  
+  #insightlens-popup {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    z-index: 1000001;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  /* Ensure it works on dark mode websites */
+  #insightlens-popup textarea {
+    background: white;
+    color: black;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    #insightlens-popup textarea {
+      background: #1e1e1e;
+      color: #ffffff;
+    }
+  }
+  
+  /* Prevent interference with website styles */
+  #insightlens-menu *,
+  #insightlens-popup * {
+    box-sizing: border-box;
+    line-height: normal;
+  }
+`
+document.head.appendChild(globalStyles)

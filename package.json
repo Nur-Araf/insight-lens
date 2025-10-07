@@ -40,6 +40,23 @@
           "/content/text-actions.ts"
         ]
       }
-    ]
+    ],
+    "commands": {
+      "trigger-review": {
+        "suggested_key": {
+          "default": "Ctrl+Shift+R",
+          "mac": "Command+Shift+R"
+        },
+        "description": "Trigger code review on selected text"
+      }
+    },
+    "permissions": [
+      "activeTab",
+      "contextMenus",
+      "storage"
+    ],
+    "background": {
+      "service_worker": "background.js"
+    }
   }
 }
