@@ -6,31 +6,27 @@ function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms))
 }
 
-export async function summarize(text: string): Promise<string> {
-  // Simulate latency
-  await delay(600)
-  // Simple stub: return first 3 lines or 200 chars summary
-  const summary = text.length > 200 ? text.slice(0, 200).trim() + "…" : text
-  return `Summary:\n${summary}`
+export async function checkSecurity(text: string): Promise<string> {
+  return `checkSecurity`
 }
 
-export async function translate(text: string): Promise<string> {
+export async function generateTests(text: string): Promise<string> {
   await delay(700)
   // Stub: pretend it's translated (in real use call translator)
-  return `Translated (stub):\n${text}`
+  return `generateTests`
 }
 
-export async function rewrite(text: string): Promise<string> {
+export async function reviewCode(text: string): Promise<string> {
   await delay(650)
   // Simple rewrite stub: uppercase first sentence (example)
   const firstSentence = text.split(/[.?!]\s/)[0] || text
-  return `Rewritten (stub):\n${firstSentence.trim()} — (rewritten)`
+  return `reviewCode`
 }
 
-export async function proofread(text: string): Promise<string> {
+export async function suggestRefactor(text: string): Promise<string> {
   await delay(650)
   // Stub: return original plus note
-  return `Proofread (stub):\n${text}\n\n[No major errors found (stub)]`
+  return `suggestRefactor`
 }
 
 export async function ask(text: string, question?: string): Promise<string> {

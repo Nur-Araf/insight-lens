@@ -37,7 +37,7 @@
           "<all_urls>"
         ],
         "js": [
-          "/content/text-actions.tsx"
+          "/content/text-actions.ts"
         ]
       }
     ]
