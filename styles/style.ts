@@ -144,3 +144,149 @@ export const copyBtnStyle = `
   cursor: pointer;
   font-weight: 700;
 `
+// ~styles/style.ts
+
+// --- Icon Styles ---
+export const floatingIconBaseStyle = `
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  border: 2px solid white;
+  pointer-events: auto;
+  user-select: none;
+`
+
+export const floatingIconHoverStyle = `
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  transform: scale(1.1);
+`
+
+// --- Animation/Global Styles (Move to a dedicated style file) ---
+
+// Keyframes
+export const pulseKeyframes = `
+  @keyframes insightlens-pulse {
+    0% { transform: scale(1); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+    50% { transform: scale(1.05); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); }
+    100% { transform: scale(1); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+  }
+`
+
+export const spinnerKeyframes = `
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+      /* Custom scrollbar for textarea */
+    #insightlens-popup textarea {
+      scrollbar-width: thin;
+      scrollbar-color: #c1c1c1 #f5f5f5;
+    }
+    
+    #insightlens-popup textarea::-webkit-scrollbar {
+      width: 12px;
+    }
+    
+    #insightlens-popup textarea::-webkit-scrollbar-track {
+      background: #f5f5f5;
+      border-radius: 6px;
+    }
+    
+    #insightlens-popup textarea::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 6px;
+      border: 2px solid #f5f5f5;
+    }
+    
+    #insightlens-popup textarea::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+    
+    #insightlens-popup textarea::-webkit-scrollbar-corner {
+      background: #f5f5f5;
+    }
+    
+    /* Smooth scrolling */
+    #insightlens-popup textarea {
+      scroll-behavior: smooth;
+    }
+`
+
+export const globalStylesString = `
+  #insightlens-menu {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    z-index: 1000000;
+    pointer-events: none;
+  }
+  
+  #insightlens-menu > div {
+    pointer-events: auto;
+  }
+  
+  #insightlens-popup {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    z-index: 1000001;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  /* Ensure it works on dark mode websites */
+  #insightlens-popup textarea {
+    background: white;
+    color: black;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    #insightlens-popup textarea {
+      background: #1e1e1e;
+      color: #ffffff;
+    }
+  }
+  
+  /* Prevent interference with website styles */
+  #insightlens-menu *,
+  #insightlens-popup * {
+    box-sizing: border-box;
+    line-height: normal;
+  }
+
+  /* Custom scrollbar for textarea */
+  #insightlens-popup textarea {
+    scrollbar-width: thin;
+    scrollbar-color: #c1c1c1 #f5f5f5;
+    scroll-behavior: smooth; /* Moved from component */
+  }
+  
+  #insightlens-popup textarea::-webkit-scrollbar {
+    width: 12px;
+  }
+  
+  #insightlens-popup textarea::-webkit-scrollbar-track {
+    background: #f5f5f5;
+    border-radius: 6px;
+  }
+  
+  #insightlens-popup textarea::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 6px;
+    border: 2px solid #f5f5f5;
+  }
+  
+  #insightlens-popup textarea::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+  
+  #insightlens-popup textarea::-webkit-scrollbar-corner {
+    background: #f5f5f5;
+  }
+`

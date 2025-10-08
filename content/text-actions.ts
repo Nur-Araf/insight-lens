@@ -1,5 +1,9 @@
 // content/text-actions.tsx
-import { isLikelyCode } from "~components/helpers/functionalHelpers"
+import {
+  isLikelyCode,
+  makeDraggableFixed,
+  waitForDOMReady
+} from "~components/helpers/functionalHelpers"
 import {
   IconAsk,
   IconClose,
@@ -16,14 +20,16 @@ import {
   actionButtonHover,
   closeBtnStyle,
   copyBtnStyle,
-  iconHoverStyle,
-  iconStyle,
-  menuWrapperStyle,
+  floatingIconBaseStyle,
+  floatingIconHoverStyle,
+  globalStylesString,
   popupButtonsRow,
   popupHeaderStyle,
   popupStyle,
   popupTextarea,
-  popupTitleStyle
+  popupTitleStyle,
+  pulseKeyframes,
+  spinnerKeyframes
 } from "~styles/style"
 
 import {
@@ -36,8 +42,6 @@ import {
 
 // Global state to track if popup is open
 let isPopupOpen = false
-
-// --- Smart Code Detection ---
 
 // --- Floating icon ---
 function createFloatingIcon(x: number, y: number, selectedText: string) {
@@ -65,34 +69,12 @@ function createFloatingIcon(x: number, y: number, selectedText: string) {
 
   const icon = document.createElement("div")
   icon.innerHTML = "⚡"
-  icon.style.cssText = `
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 50%;
-    font-size: 16px;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
-    border: 2px solid white;
-    pointer-events: auto;
-    user-select: none;
-  `
+  icon.style.cssText = floatingIconBaseStyle
   icon.title = "Code Review Actions"
 
   // Add pulsing animation for better visibility
   const pulseStyle = document.createElement("style")
-  pulseStyle.textContent = `
-    @keyframes insightlens-pulse {
-      0% { transform: scale(1); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
-      50% { transform: scale(1.05); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); }
-      100% { transform: scale(1); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
-    }
-  `
+  pulseStyle.textContent = pulseKeyframes
   document.head.appendChild(pulseStyle)
   icon.style.animation = "insightlens-pulse 2s ease-in-out"
 
@@ -114,45 +96,11 @@ function createFloatingIcon(x: number, y: number, selectedText: string) {
   })
 
   icon.addEventListener("mouseenter", () => {
-    icon.style.cssText = `
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border-radius: 50%;
-      font-size: 16px;
-      cursor: pointer;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-      transform: scale(1.1);
-      transition: all 0.2s ease;
-      border: 2px solid white;
-      pointer-events: auto;
-      user-select: none;
-    `
+    icon.style.cssText = floatingIconBaseStyle + floatingIconHoverStyle
   })
 
   icon.addEventListener("mouseleave", () => {
-    icon.style.cssText = `
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border-radius: 50%;
-      font-size: 16px;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      transform: scale(1);
-      transition: all 0.2s ease;
-      border: 2px solid white;
-      pointer-events: auto;
-      user-select: none;
-    `
+    icon.style.cssText = floatingIconBaseStyle
   })
 
   wrapper.appendChild(icon)
@@ -342,78 +290,8 @@ function openPopup(selectedText: string) {
 
   // Add spinner and scrollbar animations
   const style = document.createElement("style")
-  style.textContent = `
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    /* Custom scrollbar for textarea */
-    #insightlens-popup textarea {
-      scrollbar-width: thin;
-      scrollbar-color: #c1c1c1 #f5f5f5;
-    }
-    
-    #insightlens-popup textarea::-webkit-scrollbar {
-      width: 12px;
-    }
-    
-    #insightlens-popup textarea::-webkit-scrollbar-track {
-      background: #f5f5f5;
-      border-radius: 6px;
-    }
-    
-    #insightlens-popup textarea::-webkit-scrollbar-thumb {
-      background: #c1c1c1;
-      border-radius: 6px;
-      border: 2px solid #f5f5f5;
-    }
-    
-    #insightlens-popup textarea::-webkit-scrollbar-thumb:hover {
-      background: #a8a8a8;
-    }
-    
-    #insightlens-popup textarea::-webkit-scrollbar-corner {
-      background: #f5f5f5;
-    }
-    
-    /* Smooth scrolling */
-    #insightlens-popup textarea {
-      scroll-behavior: smooth;
-    }
-  `
+  style.textContent = spinnerKeyframes
   document.head.appendChild(style)
-}
-
-// --- Draggable helper (fixed) ---
-function makeDraggableFixed(el: HTMLElement, handle: HTMLElement) {
-  let isDown = false,
-    startX = 0,
-    startY = 0,
-    origX = 0,
-    origY = 0
-
-  handle.addEventListener("mousedown", (ev) => {
-    ev.preventDefault()
-    isDown = true
-    const rect = el.getBoundingClientRect()
-    startX = ev.clientX
-    startY = ev.clientY
-    origX = rect.left
-    origY = rect.top
-    window.addEventListener("mousemove", onMove)
-    window.addEventListener("mouseup", onUp)
-  })
-  function onMove(e: MouseEvent) {
-    if (!isDown) return
-    el.style.left = `${origX + (e.clientX - startX)}px`
-    el.style.top = `${origY + (e.clientY - startY)}px`
-  }
-  function onUp() {
-    isDown = false
-    window.removeEventListener("mousemove", onMove)
-    window.removeEventListener("mouseup", onUp)
-  }
 }
 
 // --- Helpers ---
@@ -544,18 +422,6 @@ function setupContextMenu() {
   })
 }
 
-// --- DOM ready ---
-function waitForDOMReady(callback: () => void) {
-  if (
-    document.readyState === "complete" ||
-    document.readyState === "interactive"
-  ) {
-    callback()
-  } else {
-    document.addEventListener("DOMContentLoaded", callback)
-  }
-}
-
 // --- Run after DOM ready ---
 waitForDOMReady(() => {
   console.log(
@@ -582,42 +448,5 @@ waitForDOMReady(() => {
 
 // Add this to the end of your waitForDOMReady function
 const globalStyles = document.createElement("style")
-globalStyles.textContent = `
-  #insightlens-menu {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    z-index: 1000000;
-    pointer-events: none;
-  }
-  
-  #insightlens-menu > div {
-    pointer-events: auto;
-  }
-  
-  #insightlens-popup {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    z-index: 1000001;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
-  
-  /* Ensure it works on dark mode websites */
-  #insightlens-popup textarea {
-    background: white;
-    color: black;
-  }
-  
-  @media (prefers-color-scheme: dark) {
-    #insightlens-popup textarea {
-      background: #1e1e1e;
-      color: #ffffff;
-    }
-  }
-  
-  /* Prevent interference with website styles */
-  #insightlens-menu *,
-  #insightlens-popup * {
-    box-sizing: border-box;
-    line-height: normal;
-  }
-`
+globalStyles.textContent = globalStylesString
 document.head.appendChild(globalStyles)
