@@ -1,7 +1,7 @@
 // ~styles/style.ts
 export const menuWrapperStyle = `
   position: absolute;
-  z-index: 999999;
+  z-index: 1000000;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -33,7 +33,7 @@ export const popupStyle = `
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 1000000;
+  z-index: 1000100;
   width: 90%;
   max-width: 720px;
   border-radius: 14px;
@@ -50,6 +50,8 @@ export const popupStyle = `
   max-height: 80vh;
   overflow: hidden;
   min-height: 320px;
+  popup.style.transform = "translateZ(0)" // create a stacking context for the popup
+  popup.style.willChange = "transform"
 `
 
 export const popupHeaderStyle = `

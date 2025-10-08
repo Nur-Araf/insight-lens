@@ -1,4 +1,5 @@
 // content/text-actions.tsx
+import { isLikelyCode } from "~components/helpers/functionalHelpers"
 import {
   IconAsk,
   IconClose,
@@ -32,14 +33,21 @@ import {
   reviewCode,
   suggestRefactor
 } from "../handlers/handlers"
-import { isLikelyCode } from "~components/helpers/functionalHelpers"
+
+// Global state to track if popup is open
+let isPopupOpen = false
 
 // --- Smart Code Detection ---
-
 
 // --- Floating icon ---
 function createFloatingIcon(x: number, y: number, selectedText: string) {
   console.log("[InsightLens] Creating floating icon for selection")
+
+  // Don't create icon if popup is already open
+  if (isPopupOpen) {
+    return
+  }
+
   removeExistingMenu()
 
   const wrapper = document.createElement("div")
@@ -92,8 +100,17 @@ function createFloatingIcon(x: number, y: number, selectedText: string) {
     e.stopPropagation()
     e.preventDefault()
     console.log("[InsightLens] Opening popup")
+
+    // Mark popup as open
+    isPopupOpen = true
+
+    wrapper.style.zIndex = "999900"
+    wrapper.style.pointerEvents = "none"
+    wrapper.style.opacity = "0.6" // optional: visual hint
+    wrapper.style.transition = "opacity .18s ease"
+
+    // Open popup
     openPopup(selectedText)
-    removeExistingMenu()
   })
 
   icon.addEventListener("mouseenter", () => {
@@ -189,8 +206,11 @@ function openPopup(selectedText: string) {
   closeBtn.style.cssText = closeBtnStyle
   closeBtn.innerHTML = IconClose
   closeBtn.title = "Close"
-  closeBtn.onclick = () => popup.remove()
-
+  closeBtn.onclick = () => {
+    isPopupOpen = false
+    popup.remove()
+    removeExistingMenu() // ensure the floating icon is actually removed
+  }
   controls.append(copyBtn, closeBtn)
   header.append(title, controls)
 
@@ -398,10 +418,17 @@ function makeDraggableFixed(el: HTMLElement, handle: HTMLElement) {
 
 // --- Helpers ---
 function removeExistingMenu() {
-  document.getElementById("insightlens-menu")?.remove()
+  const menu = document.getElementById("insightlens-menu")
+  console.log("[InsightLens] Removing menu:", menu)
+  menu?.remove()
 }
+
 function removeExistingPopup() {
-  document.getElementById("insightlens-popup")?.remove()
+  const popup = document.getElementById("insightlens-popup")
+  console.log("[InsightLens] Removing popup:", popup)
+  popup?.remove()
+  // Reset state when popup is removed
+  isPopupOpen = false
 }
 
 // --- Enhanced Selection Logic ---
@@ -411,6 +438,11 @@ function attachSelectionLogic() {
   let lastSelectionTime = 0
 
   document.addEventListener("mouseup", (e) => {
+    // Don't show floating icon if popup is already open
+    if (isPopupOpen) {
+      return
+    }
+
     // Ignore right clicks and very quick selections
     if (e.button === 2 || Date.now() - lastSelectionTime < 100) {
       return
@@ -459,10 +491,15 @@ function attachSelectionLogic() {
   })
 
   // Cleanup on scroll or click away
-  window.addEventListener("scroll", removeExistingMenu)
+  window.addEventListener("scroll", () => {
+    if (!isPopupOpen) {
+      removeExistingMenu()
+    }
+  })
+
   document.addEventListener("click", (e) => {
     const menu = document.getElementById("insightlens-menu")
-    if (menu && !menu.contains(e.target as Node)) {
+    if (menu && !isPopupOpen && !menu.contains(e.target as Node)) {
       removeExistingMenu()
     }
   })
@@ -481,6 +518,7 @@ function attachSelectionLogic() {
       const selectedText = sel?.toString().trim()
 
       if (selectedText && selectedText.length >= 10) {
+        isPopupOpen = true
         openPopup(selectedText)
       }
     }
