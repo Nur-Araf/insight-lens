@@ -290,3 +290,19 @@ export const globalStylesString = `
     background: #f5f5f5;
   }
 `
+
+export const askInputStyle = `
+    flex: 4;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.15);
+    font-size: 13px;
+    background-color: #0f0f0f;
+    color: #fff;
+    outline: none;
+`
+export const loaderButtonStyle = `
+    <div style="display:flex;align-items:center;gap:6px;">
+      <div class="spinner" style="width:12px;height:12px;border:2px solid transparent;border-top:2px solid currentColor;border-radius:50%;animation:spin 1s linear infinite"></div>
+      <span style="font-weight:600;font-size:13px">Processing...</span>
+    </div>`

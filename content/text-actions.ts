@@ -1,13 +1,48 @@
-;
 // content/text-actions.tsx
-import { isLikelyCode, makeDraggableFixed, waitForDOMReady } from "~components/helpers/functionalHelpers";
-import { IconAsk, IconClose, IconCopy, IconRefactor, IconReview, IconSecurity, IconTest } from "~components/helpers/icons";
-import { actionButtonBase, actionButtonGradient, actionButtonGradient2, actionButtonHover, closeBtnStyle, copyBtnStyle, floatingIconBaseStyle, floatingIconHoverStyle, globalStylesString, popupButtonsRow, popupHeaderStyle, popupStyle, popupTextarea, popupTitleStyle, pulseKeyframes, spinnerKeyframes } from "~styles/style";
+import {
+  isLikelyCode,
+  makeDraggableFixed,
+  waitForDOMReady
+} from "~components/helpers/functionalHelpers"
+import {
+  IconAsk,
+  IconClose,
+  IconCopy,
+  IconRefactor,
+  IconReview,
+  IconSecurity,
+  IconTest
+} from "~components/helpers/icons"
+import {
+  actionButtonBase,
+  actionButtonGradient,
+  actionButtonGradient2,
+  actionButtonHover,
+  askInputStyle,
+  closeBtnStyle,
+  copyBtnStyle,
+  floatingIconBaseStyle,
+  floatingIconHoverStyle,
+  globalStylesString,
+  loaderButtonStyle,
+  popupButtonsRow,
+  popupHeaderStyle,
+  popupStyle,
+  popupTextarea,
+  popupTitleStyle,
+  pulseKeyframes,
+  spinnerKeyframes
+} from "~styles/style"
 
-
-
-import { ask, askWithSession, checkSecurity, createCodeSession, generateTests, reviewCode, suggestRefactor } from "../handlers/handlers";
-
+import {
+  ask,
+  askWithSession,
+  checkSecurity,
+  createCodeSession,
+  generateTests,
+  reviewCode,
+  suggestRefactor
+} from "../handlers/handlers"
 
 // Global state to track if popup is open
 let isPopupOpen = false
@@ -183,10 +218,7 @@ function openPopup(selectedText: string) {
 
       button.disabled = true
       button.style.opacity = "0.7"
-      button.innerHTML = `<div style="display:flex;align-items:center;gap:6px;">
-        <div class="spinner" style="width:12px;height:12px;border:2px solid transparent;border-top:2px solid currentColor;border-radius:50%;animation:spin 1s linear infinite"></div>
-        <span style="font-weight:600;font-size:13px">Processing...</span>
-      </div>`
+      button.innerHTML = loaderButtonStyle
 
       try {
         const result = await handler(textarea.value)
@@ -238,10 +270,6 @@ function openPopup(selectedText: string) {
     actionButtonGradient2,
     generateTests
   )
-  // Create the Ask toggle button (similar styles to other buttons)
-
-  // ... inside openPopup(...) after btnRow and other buttons:
-
   // We will hold the live session for this popup here
   let interactiveSession: any = null
   let askInputRow: HTMLDivElement | null = null
@@ -299,16 +327,7 @@ function openPopup(selectedText: string) {
     input.type = "text"
     input.placeholder =
       "Ask a question about the code (e.g. 'What does this function do?')"
-    input.style.cssText = `
-    flex: 4;
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.15);
-    font-size: 13px;
-    background-color: #0f0f0f;
-    color: #fff;
-    outline: none;
-  `
+    input.style.cssText = askInputStyle
     input.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter") {
         ev.preventDefault()
@@ -340,14 +359,11 @@ function openPopup(selectedText: string) {
       input.disabled = true
       sendBtn.disabled = true
       const originalContent = sendBtn.innerHTML
-      sendBtn.innerHTML = `
-    <div style="display:flex;align-items:center;gap:6px;">
-      <div class="spinner" style="width:12px;height:12px;border:2px solid transparent;border-top:2px solid currentColor;border-radius:50%;animation:spin 1s linear infinite"></div>
-      <span style="font-weight:600;font-size:13px">Processing...</span>
-    </div>`
+      sendBtn.innerHTML = loaderButtonStyle
 
-      // ✅ Immediately show question and “Processing…” BEFORE any await
-      textarea.value = `Q: ${q}\nAI: Processing...`
+      // Immediately show question and “Processing…” BEFORE any await
+      const originalCode = textarea.value.trim()
+      textarea.value = `${originalCode}\n\n---\nQ: ${q}\nAI: Processing...`
 
       try {
         // Create session if not already initialized
@@ -357,9 +373,8 @@ function openPopup(selectedText: string) {
 
         // Now ask the AI (this might take time)
         const response = await askWithSession(interactiveSession, q)
-
-        // ✅ Replace with AI’s answer
-        textarea.value = response
+    
+        textarea.value = `${originalCode}\n\n---\n Q:${q}\nAI: ${response.trim()}`
 
         // Reset input field
         input.value = ""
@@ -381,24 +396,6 @@ function openPopup(selectedText: string) {
 
   // Use the interactive button instead of the old one-shot askBtn
   const askInteractiveBtn = createAskInteractiveButton()
-
-  // Ensure we close/cleanup any session when user closes popup
-  // closeBtn.onclick = () => {
-  //   isPopupOpen = false
-  //   try {
-  //     // Attempt to close the session if API provides a close method
-  //     if (
-  //       interactiveSession &&
-  //       typeof interactiveSession.close === "function"
-  //     ) {
-  //       interactiveSession.close()
-  //     }
-  //   } catch (e) {
-  //     console.warn("Error closing session:", e)
-  //   }
-  //   popup.remove()
-  //   removeExistingMenu()
-  // }
 
   btnRow.append(reviewBtn, securityBtn, refactorBtn, testBtn, askInteractiveBtn)
   popup.append(header, textarea, btnRow)
