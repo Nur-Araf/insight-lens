@@ -30,6 +30,41 @@ async function createSession(systemPrompt: string) {
   })
   return session
 }
+export async function createCodeSession(code: string) {
+  try {
+    // Create a new LM session with a helpful system prompt
+    const session = await createSession(
+      "You are an AI coding assistant who answers code-related questions clearly and concisely, " +
+        "explaining reasoning and giving short examples when useful."
+    )
+
+    // Seed the session with the selected code as context (so follow-ups refer to it)
+    // We do a prompt but ignore the returned text — it's just to store context in the session.
+    await session.prompt(
+      `Context (for future questions):\n\`\`\`\n${code}\n\`\`\``
+    )
+
+    return session
+  } catch (err: any) {
+    throw new Error(`createCodeSession error: ${err?.message ?? err}`)
+  }
+}
+
+/**
+ * Ask a question using an existing session (keeps conversation history).
+ * `question` should be a short user query about the previously-seeded code.
+ */
+export async function askWithSession(
+  session: any,
+  question: string
+): Promise<string> {
+  try {
+    if (!session) throw new Error("No session provided to askWithSession")
+    return await session.prompt(question)
+  } catch (err: any) {
+    return `askWithSession error: ${err?.message ?? err}`
+  }
+}
 
 /**
  * Review code (already working)
