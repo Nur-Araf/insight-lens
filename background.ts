@@ -28,3 +28,18 @@ chrome.commands.onCommand.addListener((command) => {
     })
   }
 })
+
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (msg.type === "SHOW_NOTIFICATION") {
+    // Forward to all active tabs
+    chrome.tabs.query({}, (tabs) => {
+      for (const tab of tabs) {
+        if (tab.id)
+          chrome.tabs.sendMessage(tab.id, {
+            type: "SHOW_NOTIFICATION",
+            payload: msg.payload
+          })
+      }
+    })
+  }
+})

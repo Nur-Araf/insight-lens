@@ -2,8 +2,14 @@
 // All handler functions for the action buttons.
 // Uses Chrome built-in Gemini Nano via the Prompt API — no external API calls needed.
 
-function delay(ms: number) {
-  return new Promise((r) => setTimeout(r, ms))
+/**
+ * Send notification event to notify.tsx via background.ts
+ */
+function notify(message: string, sound?: "start" | "success" | "error") {
+  chrome.runtime.sendMessage({
+    type: "SHOW_NOTIFICATION",
+    payload: { message, sound }
+  })
 }
 
 /**
@@ -30,29 +36,27 @@ async function createSession(systemPrompt: string) {
   })
   return session
 }
+
 export async function createCodeSession(code: string) {
   try {
-    // Create a new LM session with a helpful system prompt
     const session = await createSession(
       "You are an AI coding assistant who answers code-related questions clearly and concisely, " +
         "explaining reasoning and giving short examples when useful."
     )
 
-    // Seed the session with the selected code as context (so follow-ups refer to it)
-    // We do a prompt but ignore the returned text — it's just to store context in the session.
     await session.prompt(
       `Context (for future questions):\n\`\`\`\n${code}\n\`\`\``
     )
 
     return session
   } catch (err: any) {
+    notify("Gemini failed to create a code session.", "error")
     throw new Error(`createCodeSession error: ${err?.message ?? err}`)
   }
 }
 
 /**
  * Ask a question using an existing session (keeps conversation history).
- * `question` should be a short user query about the previously-seeded code.
  */
 export async function askWithSession(
   session: any,
@@ -60,48 +64,61 @@ export async function askWithSession(
 ): Promise<string> {
   try {
     if (!session) throw new Error("No session provided to askWithSession")
-    return await session.prompt(question)
+    notify("Asking Gemini...", "start")
+    const res = await session.prompt(question)
+    notify("Answer received from Gemini.", "success")
+    return res
   } catch (err: any) {
+    notify("Failed to get response from Gemini.", "error")
     return `askWithSession error: ${err?.message ?? err}`
   }
 }
 
 /**
- * Review code (already working)
+ * Review code
  */
 export async function reviewCode(text: string): Promise<string> {
+  notify("Gemini is reviewing your code...", "start")
   try {
     const session = await createSession(
       "You are an expert senior software engineer. Provide a clear, concise code review: list bugs, performance, and style issues, and suggest improvements."
     )
 
     const prompt = `Please review this code:\n\n\`\`\`\n${text}\n\`\`\`\n`
-    return await session.prompt(prompt)
+    const res = await session.prompt(prompt)
+    notify("Code review completed!", "success")
+    return res
   } catch (err: any) {
+    notify("Code review failed.", "error")
     return `reviewCode error: ${err.message || err}`
   }
 }
 
 /**
- * Suggest code refactor — provide cleaner structure, naming, or performance ideas.
+ * Suggest code refactor
  */
 export async function suggestRefactor(text: string): Promise<string> {
+  notify("Gemini is analyzing refactor opportunities...", "start")
   try {
     const session = await createSession(
       "You are an expert software architect. Suggest clean, maintainable, and efficient refactor ideas for the following code. Provide short examples where useful."
     )
 
     const prompt = `Suggest refactor and optimization improvements for this code:\n\n\`\`\`\n${text}\n\`\`\`\n`
-    return await session.prompt(prompt)
+    const res = await session.prompt(prompt)
+    notify("Refactor suggestions ready!", "success")
+    return res
   } catch (err: any) {
+    notify("Refactor suggestion failed.", "error")
     return `suggestRefactor error: ${err.message || err}`
   }
 }
 
 /**
- * Ask a question about the selected code.
+ * Ask a question about code
  */
 export async function ask(text: string, question?: string): Promise<string> {
+  notify("Gemini is analyzing your code...", "start")
   try {
     const session = await createSession(
       "You are an AI coding assistant who answers code-related questions clearly and concisely, explaining reasoning and giving examples when relevant."
@@ -109,40 +126,51 @@ export async function ask(text: string, question?: string): Promise<string> {
 
     const q = question || "Explain what this code does and its purpose."
     const prompt = `${q}\n\nCode:\n\`\`\`\n${text}\n\`\`\`\n`
-    return await session.prompt(prompt)
+    const res = await session.prompt(prompt)
+    notify("Explanation ready!", "success")
+    return res
   } catch (err: any) {
+    notify("Gemini failed to answer your question.", "error")
     return `ask error: ${err.message || err}`
   }
 }
 
 /**
- * Generate unit tests for the provided code.
+ * Generate unit tests
  */
 export async function generateTests(text: string): Promise<string> {
+  notify("Generating unit tests...", "start")
   try {
     const session = await createSession(
       "You are an expert QA engineer and test writer. Write simple, maintainable unit tests for given code using Jest syntax (or generic test format)."
     )
 
     const prompt = `Generate relevant unit tests for this code:\n\n\`\`\`\n${text}\n\`\`\`\n`
-    return await session.prompt(prompt)
+    const res = await session.prompt(prompt)
+    notify("Test generation completed!", "success")
+    return res
   } catch (err: any) {
+    notify("Test generation failed.", "error")
     return `generateTests error: ${err.message || err}`
   }
 }
 
 /**
- * Check for security vulnerabilities or risky patterns.
+ * Security review
  */
 export async function checkSecurity(text: string): Promise<string> {
+  notify("Checking code for vulnerabilities...", "start")
   try {
     const session = await createSession(
       "You are a security analyst specializing in application code audits. Find security vulnerabilities, unsafe code, or potential exploits. Suggest safer alternatives briefly."
     )
 
     const prompt = `Perform a security review of this code:\n\n\`\`\`\n${text}\n\`\`\`\n`
-    return await session.prompt(prompt)
+    const res = await session.prompt(prompt)
+    notify("Security review completed!", "success")
+    return res
   } catch (err: any) {
+    notify("Security review failed.", "error")
     return `checkSecurity error: ${err.message || err}`
   }
 }

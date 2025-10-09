@@ -28,19 +28,31 @@
     "typescript": "5.3.3"
   },
   "manifest": {
-    "host_permissions": [
-      "https://*/*"
-    ],
-    "content_scripts": [
+    "manifest_version": 3,
+    "name": "Insight Lens",
+    "version": "0.0.1",
+    "description": "Turn long articles into clear insights using Chrome Built-in AI.",
+    "web_accessible_resources": [
       {
+        "resources": [
+          "assets/notify.mp3"
+        ],
         "matches": [
           "<all_urls>"
-        ],
-        "js": [
-          "/content/text-actions.ts"
         ]
       }
     ],
+    "permissions": [
+      "activeTab",
+      "contextMenus",
+      "storage"
+    ],
+    "host_permissions": [
+      "https://*/*"
+    ],
+    "background": {
+      "service_worker": "background.js"
+    },
     "commands": {
       "trigger-review": {
         "suggested_key": {
@@ -50,13 +62,23 @@
         "description": "Trigger code review on selected text"
       }
     },
-    "permissions": [
-      "activeTab",
-      "contextMenus",
-      "storage"
-    ],
-    "background": {
-      "service_worker": "background.js"
-    }
+    "content_scripts": [
+      {
+        "matches": [
+          "<all_urls>"
+        ],
+        "js": [
+          "/content/text-actions.ts"
+        ]
+      },
+      {
+        "matches": [
+          "<all_urls>"
+        ],
+        "js": [
+          "/content/notify.tsx"
+        ]
+      }
+    ]
   }
 }
