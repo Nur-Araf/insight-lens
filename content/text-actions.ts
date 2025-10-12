@@ -366,15 +366,10 @@ function openPopup(selectedText: string) {
       textarea.value = `${originalCode}\n\n---\nQ: ${q}\nAI: Processing...`
 
       try {
-        // Create session if not already initialized
-        if (!interactiveSession) {
-          interactiveSession = await createCodeSession(textarea.value)
-        }
+        // Ask the AI directly using the global session
+        const response = await askWithSession(q, textarea.value)
 
-        // Now ask the AI (this might take time)
-        const response = await askWithSession(interactiveSession, q)
-    
-        textarea.value = `${originalCode}\n\n---\n Q:${q}\nAI: ${response.trim()}`
+        textarea.value = `${originalCode}\n\n---\nQ: ${q}\nAI: ${response.trim()}`
 
         // Reset input field
         input.value = ""

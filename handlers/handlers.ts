@@ -1,9 +1,8 @@
-// content/handlers.ts
 // All handler functions for the action buttons.
 // Uses Chrome built-in Gemini Nano via the Prompt API — no external API calls needed.
 
 /**
- * Send notification event to notify.tsx via background.ts
+ * Send notification to notify.tsx via background.ts
  */
 function notify(message: string, sound?: "start" | "success" | "error") {
   chrome.runtime.sendMessage({
@@ -12,8 +11,28 @@ function notify(message: string, sound?: "start" | "success" | "error") {
   })
 }
 
+let codeAssistantSession: any = null
+
+// 🔹 Create the main Gemini session once — used by all features
+export async function initCodeAssistantSession() {
+  try {
+    if (codeAssistantSession) {
+      console.log("Gemini session already active.")
+      return
+    }
+
+    codeAssistantSession = await createSession(
+      "You are an AI coding assistant who answers code-related questions clearly and concisely. Explain reasoning and give short examples when useful."
+    )
+
+    console.log("✅ Code Assistant session initialized.")
+  } catch (err: any) {
+    console.error("❌ Failed to init session:", err)
+  }
+}
+
 /**
- * Utility to create or reuse a LanguageModel session with a custom system prompt.
+ * Utility to create a LanguageModel session with a custom system prompt.
  */
 async function createSession(systemPrompt: string) {
   const LM = (globalThis as any).LanguageModel ?? (window as any).LanguageModel
@@ -37,17 +56,18 @@ async function createSession(systemPrompt: string) {
   return session
 }
 
+/**
+ * Create a new code-specific session (used for isolated tasks)
+ */
 export async function createCodeSession(code: string) {
   try {
     const session = await createSession(
-      "You are an AI coding assistant who answers code-related questions clearly and concisely, " +
-        "explaining reasoning and giving short examples when useful."
+      "You are an AI coding assistant who answers code-related questions clearly and concisely, explaining reasoning and giving short examples when useful."
     )
 
     await session.prompt(
       `Context (for future questions):\n\`\`\`\n${code}\n\`\`\``
     )
-
     return session
   } catch (err: any) {
     notify("Gemini failed to create a code session.", "error")
@@ -56,16 +76,25 @@ export async function createCodeSession(code: string) {
 }
 
 /**
- * Ask a question using an existing session (keeps conversation history).
+ * Ask a question using the main (persistent) session
  */
 export async function askWithSession(
-  session: any,
-  question: string
+  question: string,
+  codeContext?: string
 ): Promise<string> {
   try {
-    if (!session) throw new Error("No session provided to askWithSession")
+    if (!codeAssistantSession) {
+      console.warn("Session not ready, creating one on the fly...")
+      await initCodeAssistantSession()
+    }
+
     notify("Asking Gemini...", "start")
-    const res = await session.prompt(question)
+
+    const prompt = codeContext?.trim()
+      ? `Context:\n\`\`\`\n${codeContext}\n\`\`\`\n\nQuestion: ${question}`
+      : question
+
+    const res = await codeAssistantSession.prompt(prompt)
     notify("Answer received from Gemini.", "success")
     return res
   } catch (err: any) {
@@ -80,12 +109,9 @@ export async function askWithSession(
 export async function reviewCode(text: string): Promise<string> {
   notify("Gemini is reviewing your code...", "start")
   try {
-    const session = await createSession(
-      "You are an expert senior software engineer. Provide a clear, concise code review: list bugs, performance, and style issues, and suggest improvements."
-    )
-
+    if (!codeAssistantSession) await initCodeAssistantSession()
     const prompt = `Please review this code:\n\n\`\`\`\n${text}\n\`\`\`\n`
-    const res = await session.prompt(prompt)
+    const res = await codeAssistantSession.prompt(prompt)
     notify("Code review completed!", "success")
     return res
   } catch (err: any) {
@@ -100,12 +126,9 @@ export async function reviewCode(text: string): Promise<string> {
 export async function suggestRefactor(text: string): Promise<string> {
   notify("Gemini is analyzing refactor opportunities...", "start")
   try {
-    const session = await createSession(
-      "You are an expert software architect. Suggest clean, maintainable, and efficient refactor ideas for the following code. Provide short examples where useful."
-    )
-
+    if (!codeAssistantSession) await initCodeAssistantSession()
     const prompt = `Suggest refactor and optimization improvements for this code:\n\n\`\`\`\n${text}\n\`\`\`\n`
-    const res = await session.prompt(prompt)
+    const res = await codeAssistantSession.prompt(prompt)
     notify("Refactor suggestions ready!", "success")
     return res
   } catch (err: any) {
@@ -115,18 +138,15 @@ export async function suggestRefactor(text: string): Promise<string> {
 }
 
 /**
- * Ask a question about code
+ * Ask about code (simple explain)
  */
 export async function ask(text: string, question?: string): Promise<string> {
   notify("Gemini is analyzing your code...", "start")
   try {
-    const session = await createSession(
-      "You are an AI coding assistant who answers code-related questions clearly and concisely, explaining reasoning and giving examples when relevant."
-    )
-
+    if (!codeAssistantSession) await initCodeAssistantSession()
     const q = question || "Explain what this code does and its purpose."
     const prompt = `${q}\n\nCode:\n\`\`\`\n${text}\n\`\`\`\n`
-    const res = await session.prompt(prompt)
+    const res = await codeAssistantSession.prompt(prompt)
     notify("Explanation ready!", "success")
     return res
   } catch (err: any) {
@@ -141,12 +161,9 @@ export async function ask(text: string, question?: string): Promise<string> {
 export async function generateTests(text: string): Promise<string> {
   notify("Generating unit tests...", "start")
   try {
-    const session = await createSession(
-      "You are an expert QA engineer and test writer. Write simple, maintainable unit tests for given code using Jest syntax (or generic test format)."
-    )
-
+    if (!codeAssistantSession) await initCodeAssistantSession()
     const prompt = `Generate relevant unit tests for this code:\n\n\`\`\`\n${text}\n\`\`\`\n`
-    const res = await session.prompt(prompt)
+    const res = await codeAssistantSession.prompt(prompt)
     notify("Test generation completed!", "success")
     return res
   } catch (err: any) {
@@ -161,12 +178,9 @@ export async function generateTests(text: string): Promise<string> {
 export async function checkSecurity(text: string): Promise<string> {
   notify("Checking code for vulnerabilities...", "start")
   try {
-    const session = await createSession(
-      "You are a security analyst specializing in application code audits. Find security vulnerabilities, unsafe code, or potential exploits. Suggest safer alternatives briefly."
-    )
-
+    if (!codeAssistantSession) await initCodeAssistantSession()
     const prompt = `Perform a security review of this code:\n\n\`\`\`\n${text}\n\`\`\`\n`
-    const res = await session.prompt(prompt)
+    const res = await codeAssistantSession.prompt(prompt)
     notify("Security review completed!", "success")
     return res
   } catch (err: any) {
