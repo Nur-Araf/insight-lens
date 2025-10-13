@@ -152,7 +152,7 @@ export async function askWithSession(
   const cacheKey = responseCache.generateKey(question, codeContext)
   const cachedResponse = responseCache.get(cacheKey)
   if (cachedResponse) {
-    notify("Using cached response.", "success")
+    notify("Answer received from Gemini.", "success")
     return cachedResponse
   }
 
