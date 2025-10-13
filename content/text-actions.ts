@@ -38,7 +38,6 @@ import {
   ask,
   askWithSession,
   checkSecurity,
-  createCodeSession,
   generateTests,
   reviewCode,
   suggestRefactor

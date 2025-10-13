@@ -1,9 +1,10 @@
+// background.ts
 import { initCodeAssistantSession } from "~handlers/handlers"
 
 // 🔹 Run once when the extension is installed
-chrome.runtime.onInstalled.addListener(async () => {
-  console.log("🔹 Extension installed — initializing Gemini session...")
-  await initCodeAssistantSession()
+chrome.runtime.onInstalled.addListener(() => {
+  console.log("🔹 Extension installed.")
+  // ⚠️ REMOVED: Session initialization from here
 
   // Create context menu item
   chrome.contextMenus.create({
@@ -14,14 +15,17 @@ chrome.runtime.onInstalled.addListener(async () => {
 })
 
 // 🔹 Run every time the browser starts
-chrome.runtime.onStartup.addListener(async () => {
-  console.log("🔹 Browser startup — initializing Gemini session...")
-  await initCodeAssistantSession()
+chrome.runtime.onStartup.addListener(() => {
+  console.log("🔹 Browser startup.")
+  // ⚠️ REMOVED: Session initialization from here
 })
 
 // 🔹 Wake Gemini if popup or content needs it
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === "WAKE_GEMINI") initCodeAssistantSession()
+  // ⚠️ MODIFIED: Just ensure the session exists, don't force init on startup
+  if (msg.type === "WAKE_GEMINI")
+    initCodeAssistantSession().catch(console.error)
+
   if (msg.type === "SHOW_NOTIFICATION") {
     chrome.tabs.query({}, (tabs) => {
       for (const tab of tabs) {
