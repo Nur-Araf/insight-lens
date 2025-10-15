@@ -5,15 +5,30 @@ import { useStorage } from "@plasmohq/storage/hook"
 import ExtensionDetails from "~components/features/Features"
 
 export default function IndexPopup() {
-  const [apiMode, setApiMode] = useState("local") // 'local' or 'gemini'
-  const [responseStyle, setResponseStyle] = useState("short") // 'short' or 'detailed'
   const [showDetails, setShowDetails] = useState(false)
-
-  // Persistent notification toggle (default: true)
+  // Use the callback form to ensure defaults are properly set
   const [isNotification, setIsNotification] = useStorage<boolean>(
     "isNotification",
-    true
+    (v) => (v === undefined ? true : v)
   )
+  const [responseStyle, setResponseStyle] = useStorage<string>(
+    "responseStyle",
+    (v) => (v === undefined ? "short" : v)
+  )
+  const [apiMode, setApiMode] = useStorage<string>("apiMode", (v) =>
+    v === undefined ? "local" : v
+  )
+
+  // Added useEffect to explicitly set defaults on first load
+  React.useEffect(() => {
+    const initializeDefaults = async () => {
+      // This ensures the values are written to storage
+      if (isNotification === undefined) await setIsNotification(true)
+      if (responseStyle === undefined) await setResponseStyle("short")
+      if (apiMode === undefined) await setApiMode("local")
+    }
+    initializeDefaults()
+  }, [])
 
   return (
     <div className="w-96 max-w-full p-6 bg-gradient-to-br from-gray-900 to-black text-white rounded-2xl shadow-2xl ring-1 ring-white/10">
