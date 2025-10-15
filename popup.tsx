@@ -1,10 +1,19 @@
 import React, { useState } from "react"
+
+import { useStorage } from "@plasmohq/storage/hook"
+
 import ExtensionDetails from "~components/features/Features"
 
 export default function IndexPopup() {
   const [apiMode, setApiMode] = useState("local") // 'local' or 'gemini'
   const [responseStyle, setResponseStyle] = useState("short") // 'short' or 'detailed'
   const [showDetails, setShowDetails] = useState(false)
+
+  // Persistent notification toggle (default: true)
+  const [isNotification, setIsNotification] = useStorage<boolean>(
+    "isNotification",
+    true
+  )
 
   return (
     <div className="w-96 max-w-full p-6 bg-gradient-to-br from-gray-900 to-black text-white rounded-2xl shadow-2xl ring-1 ring-white/10">
@@ -111,7 +120,9 @@ export default function IndexPopup() {
               </div>
             </div>
             <div
-              className={`flex items-center px-1 py-1 rounded-lg bg-white/10 ${apiMode === "gemini" ? "justify-end" : "justify-start"}`}>
+              className={`flex items-center px-1 py-1 rounded-lg bg-white/10 ${
+                apiMode === "gemini" ? "justify-end" : "justify-start"
+              }`}>
               <button
                 onClick={() => setApiMode("local")}
                 className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
@@ -148,7 +159,9 @@ export default function IndexPopup() {
               </div>
             </div>
             <div
-              className={`flex items-center px-1 py-1 rounded-lg bg-white/10 ${responseStyle === "detailed" ? "justify-end" : "justify-start"}`}>
+              className={`flex items-center px-1 py-1 rounded-lg bg-white/10 ${
+                responseStyle === "detailed" ? "justify-end" : "justify-start"
+              }`}>
               <button
                 onClick={() => setResponseStyle("short")}
                 className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
@@ -170,6 +183,45 @@ export default function IndexPopup() {
             </div>
           </div>
         </div>
+
+        {/* Notification Toggle */}
+        <div className="p-4 rounded-xl bg-white/5 ring-1 ring-white/10">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-left">
+              <div className="text-sm font-semibold flex items-center gap-2">
+                <span>🔔</span> Notifications
+              </div>
+              <div className="text-xs text-white/60 mt-1">
+                {isNotification
+                  ? "Notifications enabled (with sound)"
+                  : "Notifications disabled"}
+              </div>
+            </div>
+            <div
+              className={`flex items-center px-1 py-1 rounded-lg bg-white/10 ${
+                isNotification ? "justify-end" : "justify-start"
+              }`}>
+              <button
+                onClick={() => setIsNotification(false)}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  !isNotification
+                    ? "bg-red-500 text-white shadow-sm"
+                    : "text-white/70"
+                }`}>
+                Off
+              </button>
+              <button
+                onClick={() => setIsNotification(true)}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  isNotification
+                    ? "bg-green-500 text-white shadow-sm"
+                    : "text-white/70"
+                }`}>
+                On
+              </button>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Current Settings Summary */}
@@ -181,7 +233,9 @@ export default function IndexPopup() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <div
-                className={`w-2 h-2 rounded-full ${apiMode === "local" ? "bg-green-400" : "bg-blue-400"}`}></div>
+                className={`w-2 h-2 rounded-full ${
+                  apiMode === "local" ? "bg-green-400" : "bg-blue-400"
+                }`}></div>
               <span>
                 {apiMode === "local"
                   ? "Local Build-in API"
@@ -190,11 +244,22 @@ export default function IndexPopup() {
             </div>
             <div className="flex items-center gap-2">
               <div
-                className={`w-2 h-2 rounded-full ${responseStyle === "short" ? "bg-green-400" : "bg-purple-400"}`}></div>
+                className={`w-2 h-2 rounded-full ${
+                  responseStyle === "short" ? "bg-green-400" : "bg-purple-400"
+                }`}></div>
               <span>
                 {responseStyle === "short"
                   ? "Short & Fast Results"
                   : "Long & Detailed Results"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isNotification ? "bg-green-400" : "bg-red-400"
+                }`}></div>
+              <span>
+                {isNotification ? "Notifications On" : "Notifications Off"}
               </span>
             </div>
           </div>

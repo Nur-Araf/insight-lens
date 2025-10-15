@@ -1,5 +1,9 @@
 // background.ts
+import { Storage } from "@plasmohq/storage"
+
 import { initCodeAssistantSession } from "~handlers/handlers"
+
+const storage = new Storage()
 
 // 🔹 Run once when the extension is installed
 chrome.runtime.onInstalled.addListener(() => {
@@ -21,21 +25,51 @@ chrome.runtime.onStartup.addListener(() => {
 })
 
 // 🔹 Wake Gemini if popup or content needs it
-chrome.runtime.onMessage.addListener((msg) => {
-  // ⚠️ MODIFIED: Just ensure the session exists, don't force init on startup
-  if (msg.type === "WAKE_GEMINI")
-    initCodeAssistantSession().catch(console.error)
+chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
+  try {
+    // 1️⃣ Handle Gemini wake request
+    if (msg.type === "WAKE_GEMINI") {
+      await initCodeAssistantSession().catch(console.error)
+    }
 
-  if (msg.type === "SHOW_NOTIFICATION") {
-    chrome.tabs.query({}, (tabs) => {
+    // 2️⃣ Handle Notifications
+    if (msg.type === "SHOW_NOTIFICATION") {
+      const isNotification = await storage.get<boolean>("isNotification")
+
+      // If disabled, stop here
+      if (!isNotification) {
+        console.log("🔕 Notifications are disabled in settings.")
+        return
+      }
+
+      const { message, sound } = msg.payload || {}
+
+      // Send notification message safely to all active tabs
+      const tabs = await chrome.tabs.query({})
+
       for (const tab of tabs) {
-        if (tab.id)
-          chrome.tabs.sendMessage(tab.id, {
+        if (!tab.id) continue
+
+        chrome.tabs
+          .sendMessage(tab.id, {
             type: "SHOW_NOTIFICATION",
-            payload: msg.payload
+            payload: { message, sound }
+          })
+          .catch((err) => {
+            // Tab may not have content script injected
+            if (
+              err.message?.includes("Receiving end does not exist") ||
+              err.message?.includes("No tab with id")
+            ) {
+              // just ignore
+              return
+            }
+            console.warn("⚠️ Notification message failed:", err)
           })
       }
-    })
+    }
+  } catch (err) {
+    console.error("❌ Error in onMessage handler:", err)
   }
 })
 
