@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from "react"
+// content/notify.tsx
+import React, { useEffect, useRef, useState } from "react"
 import ReactDOM from "react-dom"
 
-type NotificationData = {
-  message: string
-}
+type NotificationData = { message: string }
 
 const Toast: React.FC<{ message: string }> = ({ message }) => (
   <div
@@ -42,52 +41,106 @@ const Toast: React.FC<{ message: string }> = ({ message }) => (
   </div>
 )
 
-const NotificationRoot: React.FC<{ onDone: () => void }> = ({ onDone }) => {
+const NotificationRoot: React.FC = () => {
   const [toast, setToast] = useState<NotificationData | null>(null)
+  const timeoutRef = useRef<number | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const lastPlayRef = useRef<number>(0) // timestamp of last play
 
   useEffect(() => {
+    // init audio once
+    if (!audioRef.current) {
+      const a = new Audio(chrome.runtime.getURL("assets/notify.mp3"))
+      a.volume = 0.7
+      // allow quick stops/resets
+      a.preload = "auto"
+      audioRef.current = a
+    }
+
     const listener = (msg: any) => {
-      if (msg.type === "SHOW_NOTIFICATION") {
-        const { message } = msg.payload
-        setToast({ message })
+      if (msg?.type !== "SHOW_NOTIFICATION") return
+      const { message } = msg.payload || {}
 
-        // Play sound
-        const audio = new Audio(chrome.runtime.getURL("assets/notify.mp3"))
-        audio.volume = 0.7
-        audio.play().catch(console.error)
-
-        // Hide toast after animation
-        setTimeout(() => {
-          setToast(null)
-          // 🧹 Unmount component & clean up
-          setTimeout(onDone, 300)
-        }, 2500)
+      // debounce/guard repeated messages (500ms default)
+      const now = Date.now()
+      if (now - lastPlayRef.current < 500) {
+        // ignore extremely rapid duplicates
+        return
       }
+      lastPlayRef.current = now
+
+      // show toast
+      setToast({ message })
+
+      // play sound (reset first to avoid overlapping)
+      try {
+        const audio = audioRef.current!
+        audio.pause()
+        audio.currentTime = 0
+        // play returns a promise in modern browsers
+        audio.play().catch((e) => {
+          // ignore autoplay errors
+          console.debug("Audio play error:", e)
+        })
+      } catch (err) {
+        console.error("play sound failed", err)
+      }
+
+      // clear any pending hide timer and set new one
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+      timeoutRef.current = window.setTimeout(() => {
+        setToast(null)
+        timeoutRef.current = null
+      }, 2500)
     }
 
     chrome.runtime.onMessage.addListener(listener)
-    return () => chrome.runtime.onMessage.removeListener(listener)
-  }, [onDone])
+
+    return () => {
+      chrome.runtime.onMessage.removeListener(listener)
+      // cleanup timer and audio on page unload
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+      if (audioRef.current) {
+        try {
+          audioRef.current.pause()
+          audioRef.current.currentTime = 0
+        } catch {}
+      }
+    }
+  }, [])
 
   return toast ? <Toast message={toast.message} /> : null
 }
 
-// Create container
-const container = document.createElement("div")
-document.body.appendChild(container)
+/**
+ * Prevent multiple mountings if the content script is executed multiple times.
+ * This can happen if background uses scripting.executeScript repeatedly.
+ */
+if (!(window as any).__plasmo_notify_initialized) {
+  ;(window as any).__plasmo_notify_initialized = true
 
-// Render notification and clean up after done
-ReactDOM.render(
-  <NotificationRoot
-    onDone={() => {
-      ReactDOM.unmountComponentAtNode(container)
-      container.remove()
-      // Optional: fully stop the script execution
-      setTimeout(() => {
-        console.log(" Notification script cleaned up and stopped.")
-        window.close?.() // harmless in content script, but signals completion
-      }, 100)
-    }}
-  />,
-  container
-)
+  const containerId = "plasmo-notification-root"
+  let container = document.getElementById(containerId) as HTMLDivElement | null
+
+  if (!container) {
+    container = document.createElement("div")
+    container.id = containerId
+    document.body.appendChild(container)
+  }
+
+  ReactDOM.render(<NotificationRoot />, container)
+
+  // Optional: cleanup flag on unload so next page/run can re-init
+  window.addEventListener("beforeunload", () => {
+    try {
+      ;(window as any).__plasmo_notify_initialized = false
+    } catch {}
+  })
+} else {
+  // already initialized — nothing to do
+  // console.debug("notify already initialized on this page")
+}
