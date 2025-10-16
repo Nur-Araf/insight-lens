@@ -1,4 +1,3 @@
-// content/notify.tsx
 import React, { useEffect, useState } from "react"
 import ReactDOM from "react-dom"
 
@@ -17,7 +16,7 @@ const Toast: React.FC<{ message: string }> = ({ message }) => (
     }}>
     <div
       style={{
-        backgroundColor: "#0f172a", // slate-900
+        backgroundColor: "#0f172a",
         color: "white",
         padding: "10px 16px",
         borderRadius: "12px",
@@ -30,7 +29,6 @@ const Toast: React.FC<{ message: string }> = ({ message }) => (
       {message}
     </div>
 
-    {/* simple keyframe style */}
     <style>
       {`
         @keyframes fade-in-out {
@@ -44,7 +42,7 @@ const Toast: React.FC<{ message: string }> = ({ message }) => (
   </div>
 )
 
-const NotificationRoot: React.FC = () => {
+const NotificationRoot: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   const [toast, setToast] = useState<NotificationData | null>(null)
 
   useEffect(() => {
@@ -53,22 +51,43 @@ const NotificationRoot: React.FC = () => {
         const { message } = msg.payload
         setToast({ message })
 
-        // 🔊 Play local notify.mp3 from extension assets
+        // Play sound
         const audio = new Audio(chrome.runtime.getURL("assets/notify.mp3"))
         audio.volume = 0.7
         audio.play().catch(console.error)
 
-        setTimeout(() => setToast(null), 2500)
+        // Hide toast after animation
+        setTimeout(() => {
+          setToast(null)
+          // 🧹 Unmount component & clean up
+          setTimeout(onDone, 300)
+        }, 2500)
       }
     }
 
     chrome.runtime.onMessage.addListener(listener)
     return () => chrome.runtime.onMessage.removeListener(listener)
-  }, [])
+  }, [onDone])
 
   return toast ? <Toast message={toast.message} /> : null
 }
 
+// Create container
 const container = document.createElement("div")
 document.body.appendChild(container)
-ReactDOM.render(<NotificationRoot />, container)
+
+// Render notification and clean up after done
+ReactDOM.render(
+  <NotificationRoot
+    onDone={() => {
+      ReactDOM.unmountComponentAtNode(container)
+      container.remove()
+      // Optional: fully stop the script execution
+      setTimeout(() => {
+        console.log(" Notification script cleaned up and stopped.")
+        window.close?.() // harmless in content script, but signals completion
+      }, 100)
+    }}
+  />,
+  container
+)

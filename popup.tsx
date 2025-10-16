@@ -1,4 +1,17 @@
+import logo from "data-base64:~/assets/logo.png"
 import React, { useState } from "react"
+import {
+  FiBell,
+  FiCheck,
+  FiCpu,
+  FiFileText,
+  FiGlobe,
+  FiInfo,
+  FiLock,
+  FiSettings,
+  FiShield,
+  FiZap
+} from "react-icons/fi"
 
 import { useStorage } from "@plasmohq/storage/hook"
 
@@ -6,7 +19,6 @@ import ExtensionDetails from "~components/features/Features"
 
 export default function IndexPopup() {
   const [showDetails, setShowDetails] = useState(false)
-  // Use the callback form to ensure defaults are properly set
   const [isNotification, setIsNotification] = useStorage<boolean>(
     "isNotification",
     (v) => (v === undefined ? true : v)
@@ -19,10 +31,8 @@ export default function IndexPopup() {
     v === undefined ? "local" : v
   )
 
-  // Added useEffect to explicitly set defaults on first load
   React.useEffect(() => {
     const initializeDefaults = async () => {
-      // This ensures the values are written to storage
       if (isNotification === undefined) await setIsNotification(true)
       if (responseStyle === undefined) await setResponseStyle("short")
       if (apiMode === undefined) await setApiMode("local")
@@ -31,129 +41,96 @@ export default function IndexPopup() {
   }, [])
 
   return (
-    <div className="w-96 max-w-full p-6 bg-gradient-to-br from-gray-900 to-black text-white rounded-2xl shadow-2xl ring-1 ring-white/10">
-      {/* Header */}
-      <header className="flex items-start gap-4 mb-6">
-        <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-white/10 to-white/5 ring-1 ring-white/10 shadow-lg">
-          <svg
-            width="32"
-            height="32"
-            viewBox="0 0 32 32"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg">
-            <rect
-              x="2"
-              y="2"
-              width="28"
-              height="28"
-              rx="8"
-              stroke="url(#gradient)"
-              strokeWidth="1.5"
-            />
-            <path
-              d="M10 12L16 8L22 12V20L16 24L10 20V12Z"
-              stroke="url(#gradient)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M10 12L16 16L22 12"
-              stroke="url(#gradient)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M16 16V24"
-              stroke="url(#gradient)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <defs>
-              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#FFFFFF" />
-                <stop offset="100%" stopColor="#AAAAAA" />
-              </linearGradient>
-            </defs>
-          </svg>
+    <div className="w-80 max-w-full p-4 bg-gradient-to-br from-[#0A0A0A] to-[#1A1A1A] text-white shadow-2xl ring-1 ring-white/10 relative overflow-hidden">
+      {/* Premium Glow Effects */}
+      <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] rounded-full blur-3xl opacity-20 animate-pulse-slow"></div>
+      <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-gradient-to-r from-[#06B6D4] to-[#3B82F6] rounded-full blur-3xl opacity-15 animate-pulse-slow delay-1000"></div>
+
+      {/* Header - More Compact */}
+      <header className="flex items-center gap-3 mb-4 relative z-10">
+        <div className="flex-shrink-0">
+          <img
+            src={logo}
+            alt="InsightLens"
+            className="w-10 h-10 drop-shadow-lg"
+          />
         </div>
 
-        <div className="flex-1">
-          <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent drop-shadow-sm">
             InsightLens
           </h1>
-          <p className="mt-1 text-sm text-white/60 leading-tight">
-            Select code → Right click → Analyze instantly
+          <p className="text-xs text-white/60 truncate leading-tight mt-0.5">
+            Select code → Right click → Analyze
           </p>
         </div>
 
-        <div className="text-right">
-          <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 ring-1 ring-green-500/20">
+        <div className="flex-shrink-0">
+          <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/10 ring-1 ring-green-500/20 backdrop-blur-sm">
             <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             <span className="text-xs font-medium text-green-400">Ready</span>
           </div>
         </div>
       </header>
 
-      {/* Quick Overview */}
-      <section className="mb-6 p-4 rounded-xl bg-white/5 ring-1 ring-white/10">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-sm font-semibold mb-2 text-white/80">
+      {/* Quick Overview - More Compact */}
+      <section className="mb-4 p-3 rounded-lg bg-white/5 ring-1 ring-white/10 backdrop-blur-sm relative z-10">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm font-semibold mb-1.5 text-white/90 flex items-center gap-1.5">
+              <FiZap className="text-[#06B6D4] text-xs" />
               Quick Start
             </h2>
             <p className="text-xs text-white/60 leading-relaxed">
-              Select any code, right-click, and choose "Analyze with
-              InsightLens" for instant security checks, refactors, and code
-              reviews.
+              Select code, right-click, and choose "Analyze with InsightLens"
+              for instant reviews.
             </p>
           </div>
           <button
             onClick={() => setShowDetails(true)}
-            className="ml-4 px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-xs font-medium flex items-center gap-1 flex-shrink-0">
-            <span>ℹ️</span>
-            Details
+            className="flex-shrink-0 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-200 text-xs font-medium flex items-center gap-1.5 group hover:ring-1 hover:ring-white/20">
+            <FiInfo className="text-xs text-white/70 group-hover:text-white" />
+            <span>Details</span>
           </button>
         </div>
       </section>
 
-      {/* Configuration Toggles */}
-      <section className="mb-6 space-y-4">
+      {/* Configuration Toggles - Compact */}
+      <section className="mb-4 space-y-3 relative z-10">
         {/* API Mode Toggle */}
-        <div className="p-4 rounded-xl bg-white/5 ring-1 ring-white/10">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-left">
-              <div className="text-sm font-semibold flex items-center gap-2">
-                <span>🔧</span> Processing Mode
-              </div>
-              <div className="text-xs text-white/60 mt-1">
-                {apiMode === "local"
-                  ? "Local processing (secure)"
-                  : "Gemini API (internet required)"}
+        <div className="p-3 rounded-lg bg-white/5 ring-1 ring-white/10 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <FiCpu className="text-[#3B82F6] text-sm flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-white/90 truncate">
+                  Processing
+                </div>
+                <div className="text-xs text-white/60 truncate">
+                  {apiMode === "local" ? "Local (secure)" : "Gemini (cloud)"}
+                </div>
               </div>
             </div>
             <div
-              className={`flex items-center px-1 py-1 rounded-lg bg-white/10 ${
-                apiMode === "gemini" ? "justify-end" : "justify-start"
-              }`}>
+              className={`flex items-center p-1 rounded-lg bg-white/10 transition-all duration-200 ${apiMode === "gemini" ? "justify-end" : "justify-start"}`}>
               <button
                 onClick={() => setApiMode("local")}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
                   apiMode === "local"
-                    ? "bg-white text-black shadow-sm"
-                    : "text-white/70"
+                    ? "bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] text-white shadow-lg shadow-blue-500/25"
+                    : "text-white/70 hover:text-white"
                 }`}>
+                <FiShield className="text-xs" />
                 Local
               </button>
               <button
                 onClick={() => setApiMode("gemini")}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
                   apiMode === "gemini"
-                    ? "bg-blue-500 text-white shadow-sm"
-                    : "text-white/70"
+                    ? "bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] text-white shadow-lg shadow-blue-500/25"
+                    : "text-white/70 hover:text-white"
                 }`}>
+                <FiGlobe className="text-xs" />
                 Gemini
               </button>
             </div>
@@ -161,38 +138,39 @@ export default function IndexPopup() {
         </div>
 
         {/* Response Style Toggle */}
-        <div className="p-4 rounded-xl bg-white/5 ring-1 ring-white/10">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-left">
-              <div className="text-sm font-semibold flex items-center gap-2">
-                <span>📝</span> Response Style
-              </div>
-              <div className="text-xs text-white/60 mt-1">
-                {responseStyle === "short"
-                  ? "Quick summaries"
-                  : "Detailed explanations"}
+        <div className="p-3 rounded-lg bg-white/5 ring-1 ring-white/10 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <FiFileText className="text-[#06B6D4] text-sm flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-white/90 truncate">
+                  Response
+                </div>
+                <div className="text-xs text-white/60 truncate">
+                  {responseStyle === "short" ? "Quick summaries" : "Detailed"}
+                </div>
               </div>
             </div>
             <div
-              className={`flex items-center px-1 py-1 rounded-lg bg-white/10 ${
-                responseStyle === "detailed" ? "justify-end" : "justify-start"
-              }`}>
+              className={`flex items-center p-1 rounded-lg bg-white/10 transition-all duration-200 ${responseStyle === "detailed" ? "justify-end" : "justify-start"}`}>
               <button
                 onClick={() => setResponseStyle("short")}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
                   responseStyle === "short"
-                    ? "bg-green-500 text-white shadow-sm"
-                    : "text-white/70"
+                    ? "bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] text-white shadow-lg shadow-blue-500/25"
+                    : "text-white/70 hover:text-white"
                 }`}>
+                <FiZap className="text-xs" />
                 Fast
               </button>
               <button
                 onClick={() => setResponseStyle("detailed")}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
                   responseStyle === "detailed"
-                    ? "bg-purple-500 text-white shadow-sm"
-                    : "text-white/70"
+                    ? "bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] text-white shadow-lg shadow-blue-500/25"
+                    : "text-white/70 hover:text-white"
                 }`}>
+                <FiFileText className="text-xs" />
                 Detailed
               </button>
             </div>
@@ -200,37 +178,36 @@ export default function IndexPopup() {
         </div>
 
         {/* Notification Toggle */}
-        <div className="p-4 rounded-xl bg-white/5 ring-1 ring-white/10">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-left">
-              <div className="text-sm font-semibold flex items-center gap-2">
-                <span>🔔</span> Notifications
-              </div>
-              <div className="text-xs text-white/60 mt-1">
-                {isNotification
-                  ? "Notifications enabled (with sound)"
-                  : "Notifications disabled"}
+        <div className="p-3 rounded-lg bg-white/5 ring-1 ring-white/10 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <FiBell className="text-[#3B82F6] text-sm flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-white/90 truncate">
+                  Alerts
+                </div>
+                <div className="text-xs text-white/60 truncate">
+                  {isNotification ? "Enabled" : "Disabled"}
+                </div>
               </div>
             </div>
             <div
-              className={`flex items-center px-1 py-1 rounded-lg bg-white/10 ${
-                isNotification ? "justify-end" : "justify-start"
-              }`}>
+              className={`flex items-center p-1 rounded-lg bg-white/10 transition-all duration-200 ${isNotification ? "justify-end" : "justify-start"}`}>
               <button
                 onClick={() => setIsNotification(false)}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
                   !isNotification
-                    ? "bg-red-500 text-white shadow-sm"
-                    : "text-white/70"
+                    ? "bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] text-white shadow-lg shadow-blue-500/25"
+                    : "text-white/70 hover:text-white"
                 }`}>
                 Off
               </button>
               <button
                 onClick={() => setIsNotification(true)}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
                   isNotification
-                    ? "bg-green-500 text-white shadow-sm"
-                    : "text-white/70"
+                    ? "bg-gradient-to-r from-[#3B82F6] to-[#06B6D4] text-white shadow-lg shadow-blue-500/25"
+                    : "text-white/70 hover:text-white"
                 }`}>
                 On
               </button>
@@ -239,57 +216,61 @@ export default function IndexPopup() {
         </div>
       </section>
 
-      {/* Current Settings Summary */}
-      <section className="p-4 rounded-xl bg-white/5 ring-1 ring-white/10">
-        <h3 className="text-xs font-semibold mb-2 text-white/60 uppercase tracking-wide">
+      {/* Current Settings Summary - Compact */}
+      <section className="p-3 rounded-lg bg-white/5 ring-1 ring-white/10 backdrop-blur-sm relative z-10">
+        <h3 className="text-xs font-semibold mb-2 text-white/60 uppercase tracking-wider flex items-center gap-1.5">
+          <FiSettings className="text-xs" />
           Current Settings
         </h3>
-        <div className="flex items-center justify-between text-sm">
-          <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs">
+          <div className="space-y-1.5">
             <div className="flex items-center gap-2">
               <div
-                className={`w-2 h-2 rounded-full ${
-                  apiMode === "local" ? "bg-green-400" : "bg-blue-400"
-                }`}></div>
-              <span>
-                {apiMode === "local"
-                  ? "Local Build-in API"
-                  : "Gemini Internet API"}
+                className={`w-1.5 h-1.5 rounded-full ${apiMode === "local" ? "bg-gradient-to-r from-[#3B82F6] to-[#06B6D4]" : "bg-[#06B6D4]"}`}></div>
+              <span className="text-white/80">
+                {apiMode === "local" ? "Local API" : "Gemini API"}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <div
-                className={`w-2 h-2 rounded-full ${
-                  responseStyle === "short" ? "bg-green-400" : "bg-purple-400"
-                }`}></div>
-              <span>
+                className={`w-1.5 h-1.5 rounded-full ${responseStyle === "short" ? "bg-gradient-to-r from-[#3B82F6] to-[#06B6D4]" : "bg-[#06B6D4]"}`}></div>
+              <span className="text-white/80">
                 {responseStyle === "short"
-                  ? "Short & Fast Results"
-                  : "Long & Detailed Results"}
+                  ? "Fast Results"
+                  : "Detailed Results"}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <div
-                className={`w-2 h-2 rounded-full ${
-                  isNotification ? "bg-green-400" : "bg-red-400"
-                }`}></div>
-              <span>
-                {isNotification ? "Notifications On" : "Notifications Off"}
+                className={`w-1.5 h-1.5 rounded-full ${isNotification ? "bg-gradient-to-r from-[#3B82F6] to-[#06B6D4]" : "bg-red-400"}`}></div>
+              <span className="text-white/80">
+                {isNotification ? "Alerts On" : "Alerts Off"}
               </span>
             </div>
           </div>
-          <div className="text-right text-xs text-white/40">
-            <div>🔒 Privacy First</div>
-            <div>⚡ Instant Analysis</div>
+          <div className="text-right text-xs text-white/40 space-y-1">
+            <div className="flex items-center gap-1 justify-end">
+              <FiLock className="text-xs" />
+              <span>Privacy First</span>
+            </div>
+            <div className="flex items-center gap-1 justify-end">
+              <FiZap className="text-xs" />
+              <span>Instant</span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="pt-4 mt-6 border-t border-white/10">
+      {/* Footer - Compact */}
+      <footer className="pt-3 mt-4 border-t border-white/10 relative z-10">
         <div className="flex items-center justify-between text-xs text-white/40">
-          <div>Select code → Right click → Analyze</div>
-          <div>v2.0</div>
+          <div className="flex items-center gap-1">
+            <FiCheck className="text-green-400 text-xs" />
+            <span>Ready to analyze</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span>v2.0</span>
+          </div>
         </div>
       </footer>
 

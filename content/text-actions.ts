@@ -335,7 +335,7 @@ function openPopup(selectedText: string) {
     gap: 8px;
   `
 
-    // 🟦 Input field — takes 4 parts of width
+    // Input field — takes 4 parts of width
     const input = document.createElement("input")
     input.type = "text"
     input.placeholder =
@@ -348,7 +348,7 @@ function openPopup(selectedText: string) {
       }
     })
 
-    // 🟧 Send button — takes 1 part of width
+    // Send button — takes 1 part of width
     const sendBtn = document.createElement("button")
     sendBtn.textContent = "Send"
     sendBtn.style.cssText = `
@@ -363,7 +363,7 @@ function openPopup(selectedText: string) {
       await sendAskQuestion()
     })
 
-    // 🔹 Send logic
+    //  Send logic
     async function sendAskQuestion() {
       const q = input.value.trim()
       if (!q) return
