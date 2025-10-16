@@ -6,11 +6,19 @@ import { initCodeAssistantSession } from "~handlers/handlers"
 const storage = new Storage()
 
 // 🔹 Run once when the extension is installed
+async function tryInitSessionEarly() {
+  try {
+    await initCodeAssistantSession()
+    console.log("🚀 Pre-initialized Gemini session at startup/install.")
+  } catch (err) {
+    console.warn("⚠️ Early session init failed:", err)
+  }
+}
+
+// 🔹 Run once when the extension is installed
 chrome.runtime.onInstalled.addListener(() => {
   console.log("🔹 Extension installed.")
-  // ⚠️ REMOVED: Session initialization from here
-
-  // Create context menu item
+  tryInitSessionEarly() //  start session early
   chrome.contextMenus.create({
     id: "review-code",
     title: "Review Code with InsightLens",
@@ -21,9 +29,8 @@ chrome.runtime.onInstalled.addListener(() => {
 // 🔹 Run every time the browser starts
 chrome.runtime.onStartup.addListener(() => {
   console.log("🔹 Browser startup.")
-  // ⚠️ REMOVED: Session initialization from here
+  tryInitSessionEarly() // warm-up session again
 })
-
 // 🔹 Wake Gemini if popup or content needs it
 chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
   try {

@@ -34,14 +34,22 @@ import {
   spinnerKeyframes
 } from "~styles/style"
 
+// import {
+//   ask,
+//   askWithSession,
+//   checkSecurity,
+//   generateTests,
+//   reviewCode,
+//   suggestRefactor
+// } from "../handlers/handlers"
+
 import {
-  ask,
-  askWithSession,
-  checkSecurity,
-  generateTests,
-  reviewCode,
-  suggestRefactor
-} from "../handlers/handlers"
+  askWithSessionSmart,
+  checkSecuritySmart,
+  generateTestsSmart,
+  reviewCodeSmart,
+  suggestRefactorSmart
+} from "../handlers/modelRouter"
 
 // Global state to track if popup is open
 let isPopupOpen = false
@@ -249,25 +257,25 @@ function openPopup(selectedText: string) {
     IconReview,
     "Review",
     actionButtonGradient,
-    reviewCode
+    reviewCodeSmart
   )
   const securityBtn = createActionButton(
     IconSecurity,
     "Security",
     actionButtonGradient2,
-    checkSecurity
+    checkSecuritySmart
   )
   const refactorBtn = createActionButton(
     IconRefactor,
     "Refactor",
     actionButtonGradient,
-    suggestRefactor
+    suggestRefactorSmart
   )
   const testBtn = createActionButton(
     IconTest,
     "Tests",
     actionButtonGradient2,
-    generateTests
+    generateTestsSmart
   )
   // We will hold the live session for this popup here
   let interactiveSession: any = null
@@ -366,7 +374,7 @@ function openPopup(selectedText: string) {
 
       try {
         // Ask the AI directly using the global session
-        const response = await askWithSession(q, textarea.value)
+        const response = await askWithSessionSmart(q, textarea.value)
 
         textarea.value = `${originalCode}\n\n---\nQ: ${q}\nAI: ${response.trim()}`
 
