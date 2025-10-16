@@ -1,9 +1,18 @@
 // background.ts
 import { Storage } from "@plasmohq/storage"
 
+import {
+  askWithSession,
+  checkSecurity,
+  generateTests,
+  reviewCode,
+  suggestRefactor
+} from "~handlers/geminiHandlers"
 import { initCodeAssistantSession } from "~handlers/handlers"
 
 const storage = new Storage()
+
+const GEMINI_API_KEY = process.env.PLASMO_PUBLIC_GEMINI_KEY
 
 // 🔹 Run once when the extension is installed
 async function tryInitSessionEarly() {
@@ -77,6 +86,53 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     }
   } catch (err) {
     console.error("❌ Error in onMessage handler:", err)
+  }
+})
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "fetchGeminiResponse") {
+    const { type, text, context, prompt } = request
+
+    console.log(`🧠 Gemini request received (${type})`)
+
+    // Prepare body for Gemini request
+    const body = {
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `${prompt}\n\n${text}${context ? `\n\nContext:\n${context}` : ""}`
+            }
+          ]
+        }
+      ]
+    }
+
+    fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }
+    )
+      .then(async (response) => {
+        if (!response.ok) {
+          const err = await response.text()
+          throw new Error(`Gemini request failed: ${err}`)
+        }
+        const data = await response.json()
+        const reply =
+          data?.candidates?.[0]?.content?.parts?.[0]?.text || "No response."
+        sendResponse({ success: true, data: reply })
+      })
+      .catch((error) => {
+        console.error("❌ Gemini API error:", error)
+        sendResponse({ success: false, error: error.message })
+      })
+
+    return true // keep channel open for async response
   }
 })
 

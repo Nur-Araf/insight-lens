@@ -3,7 +3,6 @@ import { Storage } from "@plasmohq/storage"
 
 const storage = new Storage()
 
-// --- Notification helper ---
 function notify(message: string, sound?: "start" | "success" | "error") {
   try {
     chrome.runtime.sendMessage({
