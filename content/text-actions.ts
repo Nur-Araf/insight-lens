@@ -9,6 +9,7 @@ import {
   IconClose,
   IconCopy,
   IconRefactor,
+  IconReset,
   IconReview,
   IconSecurity,
   IconTest
@@ -33,15 +34,6 @@ import {
   pulseKeyframes,
   spinnerKeyframes
 } from "~styles/style"
-
-// import {
-//   ask,
-//   askWithSession,
-//   checkSecurity,
-//   generateTests,
-//   reviewCode,
-//   suggestRefactor
-// } from "../handlers/handlers"
 
 import {
   askWithSessionSmart,
@@ -138,6 +130,9 @@ function openPopup(selectedText: string) {
   popup.style.visibility = "hidden"
   popup.style.cssText += popupStyle
 
+  // Store original text for reset functionality
+  const originalText = selectedText
+
   // Header
   const header = document.createElement("div")
   header.style.cssText = popupHeaderStyle
@@ -151,13 +146,24 @@ function openPopup(selectedText: string) {
   controls.style.gap = "8px"
   controls.style.alignItems = "center"
 
+  // Reset button to restore original code
+  const resetBtn = document.createElement("button")
+  resetBtn.style.cssText = copyBtnStyle
+  resetBtn.innerHTML = IconReset
+  resetBtn.title = "Reset to original code"
+  resetBtn.onclick = (e) => {
+    e.stopPropagation()
+    textarea.value = originalText
+    console.log("[InsightLens] Code reset to original")
+  }
+
   const copyBtn = document.createElement("button")
   copyBtn.style.cssText = copyBtnStyle
   copyBtn.innerHTML = IconCopy
   copyBtn.title = "Copy code"
   copyBtn.onclick = (e) => {
     e.stopPropagation()
-    navigator.clipboard.writeText(selectedText)
+    navigator.clipboard.writeText(textarea.value)
     console.log("[InsightLens] Code copied to clipboard")
   }
 
@@ -170,7 +176,7 @@ function openPopup(selectedText: string) {
     popup.remove()
     removeExistingMenu() // ensure the floating icon is actually removed
   }
-  controls.append(copyBtn, closeBtn)
+  controls.append(resetBtn, copyBtn, closeBtn)
   header.append(title, controls)
 
   const textarea = document.createElement("textarea")
@@ -368,7 +374,7 @@ function openPopup(selectedText: string) {
       const originalContent = sendBtn.innerHTML
       sendBtn.innerHTML = loaderButtonStyle
 
-      // Immediately show question and “Processing…” BEFORE any await
+      // Immediately show question and "Processing…" BEFORE any await
       const originalCode = textarea.value.trim()
       textarea.value = `${originalCode}\n\n---\nQ: ${q}\nAI: Processing...`
 
