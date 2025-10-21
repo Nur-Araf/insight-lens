@@ -1,47 +1,13 @@
+;
 // content/text-actions.tsx
-import {
-  isLikelyCode,
-  makeDraggableFixed,
-  waitForDOMReady
-} from "~components/helpers/functionalHelpers"
-import {
-  IconAsk,
-  IconClose,
-  IconCopy,
-  IconRefactor,
-  IconReset,
-  IconReview,
-  IconSecurity,
-  IconTest
-} from "~components/helpers/icons"
-import {
-  actionButtonBase,
-  actionButtonGradient,
-  actionButtonGradient2,
-  actionButtonHover,
-  askInputStyle,
-  closeBtnStyle,
-  copyBtnStyle,
-  floatingIconBaseStyle,
-  floatingIconHoverStyle,
-  globalStylesString,
-  loaderButtonStyle,
-  popupButtonsRow,
-  popupHeaderStyle,
-  popupStyle,
-  popupTextarea,
-  popupTitleStyle,
-  pulseKeyframes,
-  spinnerKeyframes
-} from "~styles/style"
+import { isLikelyCode, makeDraggableFixed, waitForDOMReady } from "~components/helpers/functionalHelpers";
+import { IconAsk, IconClose, IconCopy, IconRefactor, IconReset, IconReview, IconSecurity, IconTest } from "~components/helpers/icons";
+import { actionButtonBase, actionButtonGradient, actionButtonGradient2, actionButtonHover, askInputStyle, closeBtnStyle, copyBtnStyle, floatingIconBaseStyle, floatingIconHoverStyle, globalStylesString, loaderButtonStyle, popupButtonsRow, popupHeaderStyle, popupStyle, popupTextarea, popupTitleStyle, pulseKeyframes, spinnerKeyframes } from "~styles/style";
 
-import {
-  askWithSessionSmart,
-  checkSecuritySmart,
-  generateTestsSmart,
-  reviewCodeSmart,
-  suggestRefactorSmart
-} from "../handlers/modelRouter"
+
+
+import { askWithSessionSmart, checkSecuritySmart, generateTestsSmart, reviewCodeSmart, suggestRefactorSmart } from "../handlers/modelRouter";
+
 
 // Global state to track if popup is open
 let isPopupOpen = false
@@ -183,11 +149,11 @@ function openPopup(selectedText: string) {
   textarea.style.cssText =
     popupTextarea +
     `
-    height: 320px;
-    min-height: 320px;
-    max-height: 60vh;
-    resize: vertical;
-  `
+  height: 300px;          /* reduce so ask row is visible below */
+  min-height: 300px;
+  max-height: calc(60vh - 80px); /* leave space for buttons/ask row */
+  resize: vertical;
+`
   textarea.value = selectedText
   textarea.setAttribute("aria-label", "Selected code snippet")
 
