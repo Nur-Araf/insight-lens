@@ -10,7 +10,7 @@ import {
 } from "./geminiHandlers"
 import {
   askWithSession as localAsk,
-  suggestRefactor as localRefactor,
+  answerAi as localRefactor,
   reviewCode as localReview,
   checkSecurity as localSecurity,
   generateTests as localTests
@@ -46,7 +46,7 @@ export async function reviewCodeSmart(text: string): Promise<string> {
   return mode === "local" ? localReview(text) : apiReview(text)
 }
 
-export async function suggestRefactorSmart(text: string): Promise<string> {
+export async function answerAiSmart(text: string): Promise<string> {
   const mode = await getApiMode()
   return mode === "local" ? localRefactor(text) : apiRefactor(text)
 }

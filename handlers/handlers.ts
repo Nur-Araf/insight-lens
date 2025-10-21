@@ -194,20 +194,26 @@ ${code}
 Please be thorough (300-800 words), include at least one code example and a minimal patch.`
   },
 
-  refactor: {
-    short: (code) =>
-      `Top 3 refactor suggestions (short bullets). For each suggestion include the benefit. Code:\n\`\`\`\n${code}\n\`\`\``,
-    long: (code) =>
-      `Full refactor plan. Use headings:
-## Goal
-## Suggested changes — step-by-step with small code snippets
-## Migration plan — incremental steps and tests
-## Benchmarks & complexity
-Include precise code snippets, explain tradeoffs, and give a small refactor patch.
+  answer: {
+    short: (text) =>
+      `Give a short and clear answer (2–4 sentences max). 
+Focus on the key point and avoid extra details.
 
-Code:
+Question or text:
 \`\`\`
-${code}
+${text}
+\`\`\``,
+
+    long: (text) =>
+      `Provide a detailed and helpful answer. 
+Use Markdown headings where relevant. 
+Include examples, explanations, and reasoning. 
+If the text is a question, answer it thoroughly; if it's a statement, expand on it with context and insights. 
+Keep it structured and easy to read.
+
+Question or text:
+\`\`\`
+${text}
 \`\`\``
   },
 
@@ -328,24 +334,24 @@ export async function reviewCode(text: string): Promise<string> {
   }
 }
 
-export async function suggestRefactor(text: string): Promise<string> {
+export async function answerAi(text: string): Promise<string> {
   const mode = await getResponseStyle()
-  const cacheKey = responseCache.generateKey("refactor", text, mode)
+  const cacheKey = responseCache.generateKey("answer", text, mode)
   const cached = responseCache.get(cacheKey)
   if (cached) {
-    notify("Refactor suggestions ready!", "success")
+    notify("Answer ready!", "success")
     return cached
   }
 
-  notify("Gemini is analyzing refactor opportunities...", "start")
+  notify("Gemini is analyzing request...", "start")
   try {
-    const prompt = await buildPrompt("refactor", text.substring(0, 3000))
+    const prompt = await buildPrompt("answer", text.substring(0, 3000))
     const res = await requestQueue.add(prompt)
     responseCache.set(cacheKey, res)
-    notify("Refactor suggestions ready!", "success")
+    notify("Answer ready!", "success")
     return res
   } catch (err: any) {
-    notify("Refactor suggestion failed.", "error")
+    notify("Answer failed.", "error")
     return `suggestRefactor error: ${err.message || err}`
   }
 }

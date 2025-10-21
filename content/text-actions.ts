@@ -1,12 +1,12 @@
 ;
 // content/text-actions.tsx
 import { isLikelyCode, makeDraggableFixed, waitForDOMReady } from "~components/helpers/functionalHelpers";
-import { IconAsk, IconClose, IconCopy, IconRefactor, IconReset, IconReview, IconSecurity, IconTest } from "~components/helpers/icons";
+import { IconAnswer, IconAsk, IconClose, IconCopy, IconReset, IconReview, IconSecurity, IconTest } from "~components/helpers/icons";
 import { actionButtonBase, actionButtonGradient, actionButtonGradient2, actionButtonHover, askInputStyle, closeBtnStyle, copyBtnStyle, floatingIconBaseStyle, floatingIconHoverStyle, globalStylesString, loaderButtonStyle, popupButtonsRow, popupHeaderStyle, popupStyle, popupTextarea, popupTitleStyle, pulseKeyframes, spinnerKeyframes } from "~styles/style";
 
 
 
-import { askWithSessionSmart, checkSecuritySmart, generateTestsSmart, reviewCodeSmart, suggestRefactorSmart } from "../handlers/modelRouter";
+import { answerAiSmart, askWithSessionSmart, checkSecuritySmart, generateTestsSmart, reviewCodeSmart } from "../handlers/modelRouter";
 
 
 // Global state to track if popup is open
@@ -237,11 +237,11 @@ function openPopup(selectedText: string) {
     actionButtonGradient2,
     checkSecuritySmart
   )
-  const refactorBtn = createActionButton(
-    IconRefactor,
-    "Refactor",
+  const answerBtn = createActionButton(
+    IconAnswer,
+    "Answer",
     actionButtonGradient,
-    suggestRefactorSmart
+    answerAiSmart
   )
   const testBtn = createActionButton(
     IconTest,
@@ -371,7 +371,7 @@ function openPopup(selectedText: string) {
   // Use the interactive button instead of the old one-shot askBtn
   const askInteractiveBtn = createAskInteractiveButton()
 
-  btnRow.append(reviewBtn, securityBtn, refactorBtn, testBtn, askInteractiveBtn)
+  btnRow.append(reviewBtn, securityBtn, testBtn, answerBtn, askInteractiveBtn)
   popup.append(header, textarea, btnRow)
   document.body.appendChild(popup)
 
