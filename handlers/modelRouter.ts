@@ -2,15 +2,15 @@
 import { Storage } from "@plasmohq/storage"
 
 import {
+  answerAi as apiAnswer,
   askWithSession as apiAsk,
-  suggestRefactor as apiRefactor,
   reviewCode as apiReview,
   checkSecurity as apiSecurity,
   generateTests as apiTests
 } from "./geminiHandlers"
 import {
+  answerAi as localAnswer,
   askWithSession as localAsk,
-  answerAi as localRefactor,
   reviewCode as localReview,
   checkSecurity as localSecurity,
   generateTests as localTests
@@ -48,7 +48,7 @@ export async function reviewCodeSmart(text: string): Promise<string> {
 
 export async function answerAiSmart(text: string): Promise<string> {
   const mode = await getApiMode()
-  return mode === "local" ? localRefactor(text) : apiRefactor(text)
+  return mode === "local" ? localAnswer(text) : apiAnswer(text)
 }
 
 export async function checkSecuritySmart(text: string): Promise<string> {

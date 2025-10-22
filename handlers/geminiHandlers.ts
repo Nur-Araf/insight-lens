@@ -11,7 +11,7 @@ function notify(message: string, sound?: "start" | "success" | "error") {
   }
 }
 export async function callGemini(
-  type: "ask" | "review" | "refactor" | "security" | "test",
+  type: "ask" | "review" | "answer" | "security" | "test",
   text: string,
   context?: string
 ): Promise<string> {
@@ -44,8 +44,8 @@ function getPrompt(type: string): string {
   switch (type) {
     case "review":
       return "Please review the following code and provide concise feedback:"
-    case "refactor":
-      return "Refactor the following code for clarity, performance, and maintainability:"
+    case "answer":
+      return "Provide a clear, helpful, and accurate answer to the following question or code problem. If it's code, explain what it does and offer corrections or improvements if needed:"
     case "security":
       return "Analyze this code for potential security vulnerabilities and suggest improvements:"
     case "test":
@@ -60,6 +60,6 @@ function getPrompt(type: string): string {
 export const askWithSession = (q: string, ctx?: string) =>
   callGemini("ask", q, ctx)
 export const reviewCode = (code: string) => callGemini("review", code)
-export const suggestRefactor = (code: string) => callGemini("refactor", code)
+export const answerAi = (code: string) => callGemini("answer", code)
 export const checkSecurity = (code: string) => callGemini("security", code)
 export const generateTests = (code: string) => callGemini("test", code)
