@@ -1,4 +1,3 @@
-// content/notify.tsx
 import React, { useEffect, useRef, useState } from "react"
 import ReactDOM from "react-dom"
 
@@ -44,52 +43,23 @@ const Toast: React.FC<{ message: string }> = ({ message }) => (
 const NotificationRoot: React.FC = () => {
   const [toast, setToast] = useState<NotificationData | null>(null)
   const timeoutRef = useRef<number | null>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const lastPlayRef = useRef<number>(0) // timestamp of last play
+  const lastPlayRef = useRef<number>(0) // timestamp of last show
 
   useEffect(() => {
-    // init audio once
-    if (!audioRef.current) {
-      const a = new Audio(chrome.runtime.getURL("assets/notify.mp3"))
-      a.volume = 0.7
-      // allow quick stops/resets
-      a.preload = "auto"
-      audioRef.current = a
-    }
-
     const listener = (msg: any) => {
       if (msg?.type !== "SHOW_NOTIFICATION") return
       const { message } = msg.payload || {}
 
       // debounce/guard repeated messages (500ms default)
       const now = Date.now()
-      if (now - lastPlayRef.current < 500) {
-        // ignore extremely rapid duplicates
-        return
-      }
+      if (now - lastPlayRef.current < 500) return
       lastPlayRef.current = now
 
       // show toast
       setToast({ message })
 
-      // play sound (reset first to avoid overlapping)
-      try {
-        const audio = audioRef.current!
-        audio.pause()
-        audio.currentTime = 0
-        // play returns a promise in modern browsers
-        audio.play().catch((e) => {
-          // ignore autoplay errors
-          console.debug("Audio play error:", e)
-        })
-      } catch (err) {
-        console.error("play sound failed", err)
-      }
-
       // clear any pending hide timer and set new one
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
       timeoutRef.current = window.setTimeout(() => {
         setToast(null)
         timeoutRef.current = null
@@ -100,16 +70,7 @@ const NotificationRoot: React.FC = () => {
 
     return () => {
       chrome.runtime.onMessage.removeListener(listener)
-      // cleanup timer and audio on page unload
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-      if (audioRef.current) {
-        try {
-          audioRef.current.pause()
-          audioRef.current.currentTime = 0
-        } catch {}
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
   }, [])
 
@@ -118,7 +79,6 @@ const NotificationRoot: React.FC = () => {
 
 /**
  * Prevent multiple mountings if the content script is executed multiple times.
- * This can happen if background uses scripting.executeScript repeatedly.
  */
 if (!(window as any).__plasmo_notify_initialized) {
   ;(window as any).__plasmo_notify_initialized = true
@@ -134,13 +94,9 @@ if (!(window as any).__plasmo_notify_initialized) {
 
   ReactDOM.render(<NotificationRoot />, container)
 
-  // Optional: cleanup flag on unload so next page/run can re-init
   window.addEventListener("beforeunload", () => {
     try {
       ;(window as any).__plasmo_notify_initialized = false
     } catch {}
   })
-} else {
-  // already initialized — nothing to do
-  // console.debug("notify already initialized on this page")
 }

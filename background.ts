@@ -1,13 +1,6 @@
 // background.ts
 import { Storage } from "@plasmohq/storage"
 
-import {
-  askWithSession,
-  checkSecurity,
-  generateTests,
-  reviewCode,
-  suggestRefactor
-} from "~handlers/geminiHandlers"
 import { initCodeAssistantSession } from "~handlers/handlers"
 
 const storage = new Storage()
