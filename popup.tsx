@@ -54,7 +54,7 @@ export default function IndexPopup() {
   }
 
   return (
-    <div className="w-80 max-w-full p-3 bg-gradient-to-br from-[#0A0A0A] to-[#1A1A2E] text-white shadow-2xl ring-1 ring-purple-500/20 relative overflow-hidden">
+    <div className="w-[350px] max-w-full p-3 bg-gradient-to-br from-[#0A0A0A] to-[#1A1A2E] text-white shadow-2xl ring-1 ring-purple-500/20 relative overflow-hidden">
       {/* Enhanced Glow Effects */}
       <div className="absolute -top-24 -right-24 w-48 h-48 bg-gradient-to-r from-[#8B5CF6] to-[#06B6D4] rounded-full blur-4xl opacity-25 animate-pulse-slow"></div>
       <div className="absolute -bottom-24 -left-24 w-24 h-24 bg-gradient-to-r from-[#06B6D4] to-[#8B5CF6] rounded-full blur-4xl opacity-20 animate-pulse-slow delay-1000"></div>
@@ -283,6 +283,24 @@ export default function IndexPopup() {
             <span className="text-white/70">
               {isNotification ? "Alerts On" : "Alerts Off"}
             </span>
+          </div>
+        </div>
+      </section>
+
+      {/* Quick Access Section */}
+      <section className="mb-3 p-2 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 ring-amber-500/20 backdrop-blur-sm relative z-10 hover:ring-amber-500/30 transition-all duration-300">
+        <div className="flex items-center gap-2">
+          <FiTarget className="text-amber-400 text-[10px]" />
+          <div className="flex items-center gap-1 text-[11px] text-amber-300/80">
+            <span>Press</span>
+            <kbd className="px-1 py-0.5 bg-amber-500/20 rounded text-amber-300 border border-amber-500/30 font-medium text-[10px] mx-0.5">
+              Ctrl+Shift+R
+            </kbd>
+            <span>Or</span>
+            <FiMousePointer className="text-amber-400/70 text-[10px] mx-0.5" />
+            <kbd className="px-1 py-0.5 bg-amber-500/20 rounded text-amber-300 border border-amber-500/30 font-medium text-[10px] mx-0.5">
+              Select Code
+            </kbd>
           </div>
         </div>
       </section>

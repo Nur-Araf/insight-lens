@@ -139,12 +139,40 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 })
 
-// 🔹 Keyboard shortcut handler
+// background.js
+// Service worker that forwards the "trigger-review" command to the active tab.
+
 chrome.commands.onCommand.addListener((command) => {
+  console.log("[InsightLens][background] command received:", command)
   if (command === "trigger-review") {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]?.id)
-        chrome.tabs.sendMessage(tabs[0].id, { action: "triggerReview" })
+      const tab = tabs && tabs[0]
+      if (!tab || !tab.id) {
+        console.warn("[InsightLens][background] no active tab found")
+        return
+      }
+      try {
+        chrome.tabs.sendMessage(
+          tab.id,
+          { action: "open-insightlens" },
+          (resp) => {
+            const err = chrome.runtime.lastError
+            if (err) {
+              console.warn(
+                "[InsightLens][background] sendMessage error:",
+                err.message
+              )
+            } else {
+              console.log(
+                "[InsightLens][background] message sent to tab",
+                tab.id
+              )
+            }
+          }
+        )
+      } catch (e) {
+        console.error("[InsightLens][background] failed to send message:", e)
+      }
     })
   }
 })

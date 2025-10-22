@@ -1,13 +1,47 @@
-;
-// content/text-actions.tsx
-import { isLikelyCode, makeDraggableFixed, waitForDOMReady } from "~components/helpers/functionalHelpers";
-import { IconAnswer, IconAsk, IconClose, IconCopy, IconReset, IconReview, IconSecurity, IconTest } from "~components/helpers/icons";
-import { actionButtonBase, actionButtonGradient, actionButtonGradient2, actionButtonHover, askInputStyle, closeBtnStyle, copyBtnStyle, floatingIconBaseStyle, floatingIconHoverStyle, globalStylesString, loaderButtonStyle, popupButtonsRow, popupHeaderStyle, popupStyle, popupTextarea, popupTitleStyle, pulseKeyframes, spinnerKeyframes } from "~styles/style";
+/* content/text-actions.tsx */
+import {
+  isLikelyCode,
+  makeDraggableFixed,
+  waitForDOMReady
+} from "~components/helpers/functionalHelpers"
+import {
+  IconAnswer,
+  IconAsk,
+  IconClose,
+  IconCopy,
+  IconReset,
+  IconReview,
+  IconSecurity,
+  IconTest
+} from "~components/helpers/icons"
+import {
+  actionButtonBase,
+  actionButtonGradient,
+  actionButtonGradient2,
+  actionButtonHover,
+  askInputStyle,
+  closeBtnStyle,
+  copyBtnStyle,
+  floatingIconBaseStyle,
+  floatingIconHoverStyle,
+  globalStylesString,
+  loaderButtonStyle,
+  popupButtonsRow,
+  popupHeaderStyle,
+  popupStyle,
+  popupTextarea,
+  popupTitleStyle,
+  pulseKeyframes,
+  spinnerKeyframes
+} from "~styles/style"
 
-
-
-import { answerAiSmart, askWithSessionSmart, checkSecuritySmart, generateTestsSmart, reviewCodeSmart } from "../handlers/modelRouter";
-
+import {
+  answerAiSmart,
+  askWithSessionSmart,
+  checkSecuritySmart,
+  generateTestsSmart,
+  reviewCodeSmart
+} from "../handlers/modelRouter"
 
 // Global state to track if popup is open
 let isPopupOpen = false
@@ -60,8 +94,8 @@ function createFloatingIcon(x: number, y: number, selectedText: string) {
     icon.style.opacity = "0.6"
     icon.style.transition = "opacity .18s ease"
 
-    // Open popup
-    openPopup(selectedText)
+    // Open popup (may pass selectedText or empty)
+    openPopup(selectedText || "")
   })
 
   icon.addEventListener("mouseenter", () => {
@@ -129,8 +163,13 @@ function openPopup(selectedText: string) {
   copyBtn.title = "Copy code"
   copyBtn.onclick = (e) => {
     e.stopPropagation()
-    navigator.clipboard.writeText(textarea.value)
-    console.log("[InsightLens] Code copied to clipboard")
+    try {
+      navigator.clipboard.writeText(textarea.value)
+      console.log("[InsightLens] Code copied to clipboard")
+    } catch (err) {
+      // ignore clipboard errors for copy
+      console.warn("[InsightLens] copy to clipboard failed:", err)
+    }
   }
 
   const closeBtn = document.createElement("button")
@@ -154,7 +193,8 @@ function openPopup(selectedText: string) {
   max-height: calc(60vh - 80px); /* leave space for buttons/ask row */
   resize: vertical;
 `
-  textarea.value = selectedText
+  // IMPORTANT: we intentionally set the textarea to empty so no clipboard permission is needed
+  textarea.value = selectedText || ""
   textarea.setAttribute("aria-label", "Selected code snippet")
 
   const btnRow = document.createElement("div")
@@ -381,6 +421,18 @@ function openPopup(selectedText: string) {
   popup.style.top = `${(window.innerHeight - rect.height) / 2}px`
   popup.style.visibility = "visible"
 
+  // focus the textarea so the user can type immediately
+  try {
+    // small timeout to ensure element is in DOM & visible before focus
+    setTimeout(() => {
+      textarea.focus()
+      // move cursor to end
+      textarea.selectionStart = textarea.selectionEnd = textarea.value.length
+    }, 0)
+  } catch (err) {
+    console.warn("[InsightLens] Unable to focus textarea:", err)
+  }
+
   makeDraggableFixed(popup, header)
 
   // Add spinner and scrollbar animations
@@ -478,22 +530,24 @@ function attachSelectionLogic() {
   })
 
   // Keyboard shortcuts
-  document.addEventListener("keydown", (e) => {
+  document.addEventListener("keydown", async (e) => {
+    // Escape clears UI
     if (e.key === "Escape") {
       removeExistingMenu()
       removeExistingPopup()
+      return
     }
 
-    // Ctrl+Shift+R to trigger review on current selection
-    if (e.ctrlKey && e.shiftKey && e.key === "R") {
+    // Ctrl/Command + Shift + R to trigger review — open an EMPTY popup (no clipboard)
+    const isMod = e.ctrlKey || e.metaKey
+    if (isMod && e.shiftKey && (e.key === "R" || e.key === "r")) {
       e.preventDefault()
-      const sel = window.getSelection()
-      const selectedText = sel?.toString().trim()
 
-      if (selectedText && selectedText.length >= 10) {
-        isPopupOpen = true
-        openPopup(selectedText)
-      }
+      if (isPopupOpen) return
+
+      // Intentionally open empty — do NOT access clipboard to avoid permission prompts.
+      isPopupOpen = true
+      openPopup("")
     }
   })
 }
@@ -540,6 +594,35 @@ waitForDOMReady(() => {
   `
   document.head.appendChild(globalStyles)
 })
+
+// Listen for background requests to open the popup (from service worker)
+// background message will open an EMPTY popup (no clipboard access)
+if (
+  typeof chrome !== "undefined" &&
+  chrome.runtime &&
+  chrome.runtime.onMessage
+) {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message && message.action === "open-insightlens") {
+      try {
+        if (isPopupOpen) {
+          console.log("[InsightLens] popup already open - ignoring message")
+          return
+        }
+
+        isPopupOpen = true
+        openPopup("")
+      } catch (err) {
+        console.error(
+          "[InsightLens] error handling open-insightlens message:",
+          err
+        )
+      }
+      // no synchronous response
+      return
+    }
+  })
+}
 
 // Add this to the end of your waitForDOMReady function
 const globalStyles = document.createElement("style")
