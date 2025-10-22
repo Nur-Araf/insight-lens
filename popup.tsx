@@ -43,14 +43,11 @@ export default function IndexPopup() {
     initializeDefaults()
   }, [])
 
-  const handleDownloadManual = () => {
-    const pdfUrl = chrome.runtime.getURL("assets/InsightLens_User_Manual.pdf")
-    const link = document.createElement("a")
-    link.href = pdfUrl
-    link.download = "InsightLens_User_Manual.pdf"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const handleDownloadManual = async () => {
+    const url =
+      "https://drive.google.com/file/d/1ywq5yngv79UoDBUkcaQkwWkT9osvcXYD/view?usp=sharing"
+    // Prefer chrome.tabs.create to open reliably from an extension
+    chrome.tabs.create({ url })
   }
 
   return (
@@ -305,6 +302,16 @@ export default function IndexPopup() {
         </div>
       </section>
 
+      {/* Gemini Installation Notice */}
+        {apiMode === "local" && (
+          <div className="mb-3 text-[10px] text-amber-300/70 text-center bg-amber-500/10 rounded-lg p-1.5 border border-amber-500/20 backdrop-blur-sm">
+            <span className="flex items-center justify-center gap-1">
+              <FiGlobe className="text-[10px]" />
+              Make sure you have Gemini Neno installed
+            </span>
+          </div>
+        )}
+
       {/* Download Button at Bottom */}
       <section className="relative z-10">
         <button
@@ -318,9 +325,9 @@ export default function IndexPopup() {
         </button>
       </section>
 
-      {/* Enhanced Footer */}
+      {/* Enhanced Footer with Gemini Notice */}
       <footer className="mt-3 pt-2 border-t border-white/10 relative z-10">
-        <div className="flex items-center justify-between text-xs text-white/40">
+        <div className="flex items-center justify-between text-xs text-white/40 mb-1">
           <div className="flex items-center gap-1">
             <FiCheck className="text-emerald-400 text-xs" />
             <span>Ready to analyze</span>

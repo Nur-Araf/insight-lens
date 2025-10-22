@@ -4,6 +4,11 @@
   "version": "0.0.1",
   "description": "Turn long articles into clear insights using Chrome Built-in AI.",
   "author": "cocshishir@gmail.com",
+  "icons": {
+    "16": "assets/icon.png",
+    "48": "assets/icon.png",
+    "128": "assets/icon.png"
+  },
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
