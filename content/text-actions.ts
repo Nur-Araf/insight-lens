@@ -47,6 +47,7 @@ import {
 } from "../handlers/modelRouter"
 // Import the save handler
 import { saveCodeSmart } from "../handlers/saveHandler"
+import { attachSelectionListener } from "~handlers/selectionHandler"
 
 // Global state to track if popup is open
 let isPopupOpen = false
@@ -620,102 +621,6 @@ function removeExistingPopup() {
   isPopupOpen = false
 }
 
-// --- Enhanced Selection Logic ---
-function attachSelectionLogic() {
-  console.log("[InsightLens] Initializing universal selection listeners")
-
-  let lastSelectionTime = 0
-
-  document.addEventListener("mouseup", (e) => {
-    // Don't show floating icon if popup is already open
-    if (isPopupOpen) {
-      return
-    }
-
-    // Ignore right clicks and very quick selections
-    if (e.button === 2 || Date.now() - lastSelectionTime < 100) {
-      return
-    }
-
-    setTimeout(() => {
-      const sel = window.getSelection()
-      const selectedText = sel?.toString().trim()
-
-      // Don't show if selection is too small or empty
-      if (!selectedText || selectedText.length < 10) {
-        removeExistingMenu()
-        return
-      }
-
-      // Smart code detection based on content
-      if (!isLikelyCode(selectedText)) {
-        removeExistingMenu()
-        return
-      }
-
-      const range = sel.getRangeAt(0)
-      const rect = range.getBoundingClientRect()
-
-      // Enhanced positioning logic
-      let x, y
-
-      // Check if selection rectangle is valid
-      if (rect.width === 0 && rect.height === 0) {
-        // Fallback: Use cursor position
-        x = e.clientX + window.scrollX + 10
-        y = e.clientY + window.scrollY - 30
-      } else {
-        // Use selection position with better handling
-        x = rect.right + window.scrollX + 10
-        y = rect.top + window.scrollY - 6
-      }
-
-      // Ensure the icon stays within viewport bounds
-      x = Math.min(window.innerWidth - 50, Math.max(10, x))
-      y = Math.min(window.innerHeight - 50, Math.max(10, y))
-
-      createFloatingIcon(x, y, selectedText)
-      lastSelectionTime = Date.now()
-    }, 50)
-  })
-
-  // Cleanup on scroll or click away
-  window.addEventListener("scroll", () => {
-    if (!isPopupOpen) {
-      removeExistingMenu()
-    }
-  })
-
-  document.addEventListener("click", (e) => {
-    const menu = document.getElementById("insightlens-menu")
-    if (menu && !isPopupOpen && !menu.contains(e.target as Node)) {
-      removeExistingMenu()
-    }
-  })
-
-  // Keyboard shortcuts
-  document.addEventListener("keydown", async (e) => {
-    // Escape clears UI
-    if (e.key === "Escape") {
-      removeExistingMenu()
-      removeExistingPopup()
-      return
-    }
-
-    // Ctrl/Command + Shift + R to trigger review — open an EMPTY popup (no clipboard)
-    const isMod = e.ctrlKey || e.metaKey
-    if (isMod && e.shiftKey && (e.key === "R" || e.key === "r")) {
-      e.preventDefault()
-
-      if (isPopupOpen) return
-
-      // Intentionally open empty — do NOT access clipboard to avoid permission prompts.
-      isPopupOpen = true
-      openPopup("")
-    }
-  })
-}
-
 // --- Context Menu Integration ---
 function setupContextMenu() {
   // Listen for context menu on selections
@@ -735,22 +640,31 @@ function setupContextMenu() {
   })
 }
 
-// --- Run after DOM ready ---
 waitForDOMReady(() => {
-  console.log(
-    "[InsightLens] DOM ready - attaching universal selection listeners"
-  )
-  attachSelectionLogic()
+  console.log("[InsightLens] DOM ready - initializing InsightLens UI")
+
+  // Attach new selection listener
+  attachSelectionListener((selection) => {
+    if (!selection) {
+      removeExistingMenu()
+      return
+    }
+
+    // Create the floating icon when valid code is selected
+    createFloatingIcon(selection.x, selection.y, selection.text)
+  })
+
+  // Context menu setup (optional, safe to keep)
   setupContextMenu()
 
-  // Add global styles for consistent appearance
+  // Add global styles (keep this!)
   const globalStyles = document.createElement("style")
   globalStyles.textContent = `
     #insightlens-menu, #insightlens-popup {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       z-index: 1000000;
     }
-    
+
     #insightlens-popup {
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);

@@ -376,14 +376,14 @@ export default function IndexPopup() {
       </section>
 
       {/* Gemini Installation Notice */}
-      {apiMode === "local" && (
+      {/* {apiMode === "local" && (
         <div className="mb-3 text-[10px] text-amber-300/70 text-center bg-amber-500/10 rounded-lg p-1.5 border border-amber-500/20 backdrop-blur-sm">
           <span className="flex items-center justify-center gap-1">
             <FiGlobe className="text-[10px]" />
             Make sure you have Gemini Neno installed
           </span>
         </div>
-      )}
+      )} */}
 
       {/* Enhanced Footer */}
       <footer className="mt-3 pt-2 border-t border-white/10 relative z-10">

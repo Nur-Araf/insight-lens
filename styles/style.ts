@@ -147,7 +147,7 @@ export const copyBtnStyle = `
 // ~styles/style.ts
 
 // --- Icon Styles ---
-export const floatingIconBaseStyle = `
+ export const floatingIconBaseStyle = `
   display: flex;
   align-items: center;
   justify-content: center;
