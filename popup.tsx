@@ -1,11 +1,13 @@
-import logo from "data-base64:~/assets/logo.png"
+import logo from "data-base64:~/assets/logo2.png"
 
 import "./style.css"
 
 import React, { useState } from "react"
 import {
+  FiArrowLeft,
   FiBell,
   FiCheck,
+  FiCode,
   FiCpu,
   FiDownload,
   FiEye,
@@ -14,13 +16,20 @@ import {
   FiGlobe,
   FiLock,
   FiMousePointer,
+  FiSave,
   FiShield,
   FiTarget,
+  FiTrash2,
   FiZap
 } from "react-icons/fi"
 
 import { useStorage } from "@plasmohq/storage/hook"
 
+import { SavedCodesView } from "~components/features/SavedCode"
+
+// Saved codes view component
+
+// Main popup component
 export default function IndexPopup() {
   const [isNotification, setIsNotification] = useStorage<boolean>(
     "isNotification",
@@ -33,6 +42,11 @@ export default function IndexPopup() {
   const [apiMode, setApiMode] = useStorage<string>("apiMode", (v) =>
     v === undefined ? "local" : v
   )
+  const [savedCodes, setSavedCodes] = useStorage<Record<string, string>>(
+    "savedCodes",
+    {}
+  )
+  const [currentView, setCurrentView] = useState<"main" | "saved">("main")
 
   React.useEffect(() => {
     const initializeDefaults = async () => {
@@ -46,10 +60,27 @@ export default function IndexPopup() {
   const handleDownloadManual = async () => {
     const url =
       "https://drive.google.com/file/d/1ywq5yngv79UoDBUkcaQkwWkT9osvcXYD/view?usp=sharing"
-    // Prefer chrome.tabs.create to open reliably from an extension
     chrome.tabs.create({ url })
   }
 
+  const handleDeleteCode = async (name: string) => {
+    const newSavedCodes = { ...savedCodes }
+    delete newSavedCodes[name]
+    await setSavedCodes(newSavedCodes)
+  }
+
+  // If we're in saved codes view, render that component
+  if (currentView === "saved") {
+    return (
+      <SavedCodesView
+        onBack={() => setCurrentView("main")}
+        savedCodes={savedCodes}
+        onDeleteCode={handleDeleteCode}
+      />
+    )
+  }
+
+  // Main view
   return (
     <div className="w-[350px] max-w-full p-3 bg-gradient-to-br from-[#0A0A0A] to-[#1A1A2E] text-white shadow-2xl ring-1 ring-purple-500/20 relative overflow-hidden">
       {/* Enhanced Glow Effects */}
@@ -243,6 +274,42 @@ export default function IndexPopup() {
         </div>
       </section>
 
+      {/* Quick Actions Section */}
+      <section className="mb-3 relative z-10">
+        <h3 className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <div className="w-1 h-1 bg-amber-400 rounded-full animate-pulse"></div>
+          Quick Actions
+        </h3>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setCurrentView("saved")}
+            className="p-3 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 ring-cyan-500/20 backdrop-blur-sm hover:ring-cyan-500/30 transition-all duration-300 group text-left">
+            <div className="flex items-center gap-2 mb-1">
+              <FiSave className="text-cyan-400 text-sm" />
+              <span className="text-xs font-medium text-white/90">
+                Saved Codes
+              </span>
+            </div>
+            <p className="text-xs text-cyan-300/70">
+              {Object.keys(savedCodes || {}).length} snippets
+            </p>
+          </button>
+
+          <button
+            onClick={handleDownloadManual}
+            className="p-3 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 ring-purple-500/20 backdrop-blur-sm hover:ring-purple-500/30 transition-all duration-300 group text-left">
+            <div className="flex items-center gap-2 mb-1">
+              <FiDownload className="text-purple-400 text-sm" />
+              <span className="text-xs font-medium text-white/90">
+                User Guide
+              </span>
+            </div>
+            <p className="text-xs text-purple-300/70">Download manual</p>
+          </button>
+        </div>
+      </section>
+
       {/* Status Summary with Glow */}
       <section className="mb-3 p-2 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 ring-cyan-500/20 backdrop-blur-sm relative z-10">
         <div className="flex items-center justify-between mb-2">
@@ -281,6 +348,12 @@ export default function IndexPopup() {
               {isNotification ? "Alerts On" : "Alerts Off"}
             </span>
           </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-glow-amber" />
+            <span className="text-white/70">
+              {Object.keys(savedCodes || {}).length} Saved
+            </span>
+          </div>
         </div>
       </section>
 
@@ -303,29 +376,16 @@ export default function IndexPopup() {
       </section>
 
       {/* Gemini Installation Notice */}
-        {apiMode === "local" && (
-          <div className="mb-3 text-[10px] text-amber-300/70 text-center bg-amber-500/10 rounded-lg p-1.5 border border-amber-500/20 backdrop-blur-sm">
-            <span className="flex items-center justify-center gap-1">
-              <FiGlobe className="text-[10px]" />
-              Make sure you have Gemini Neno installed
-            </span>
-          </div>
-        )}
-
-      {/* Download Button at Bottom */}
-      <section className="relative z-10">
-        <button
-          onClick={handleDownloadManual}
-          className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-purple-500/20 to-cyan-500/20 hover:from-purple-500/30 hover:to-cyan-500/30 transition-all duration-300 text-sm font-medium flex items-center justify-center gap-2 group ring-1 ring-purple-500/30 hover:ring-purple-500/50 backdrop-blur-sm">
-          <FiDownload className="text-purple-300 group-hover:text-cyan-300 transition-colors duration-300" />
-          <span className="bg-gradient-to-r from-purple-200 to-cyan-200 bg-clip-text text-transparent group-hover:from-purple-100 group-hover:to-cyan-100 transition-all duration-300">
-            Download User Guide
+      {apiMode === "local" && (
+        <div className="mb-3 text-[10px] text-amber-300/70 text-center bg-amber-500/10 rounded-lg p-1.5 border border-amber-500/20 backdrop-blur-sm">
+          <span className="flex items-center justify-center gap-1">
+            <FiGlobe className="text-[10px]" />
+            Make sure you have Gemini Neno installed
           </span>
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-xl blur-sm opacity-0 group-hover:opacity-20 transition-opacity duration-300 -z-10"></div>
-        </button>
-      </section>
+        </div>
+      )}
 
-      {/* Enhanced Footer with Gemini Notice */}
+      {/* Enhanced Footer */}
       <footer className="mt-3 pt-2 border-t border-white/10 relative z-10">
         <div className="flex items-center justify-between text-xs text-white/40 mb-1">
           <div className="flex items-center gap-1">
@@ -345,8 +405,14 @@ export default function IndexPopup() {
         .shadow-glow-purple { box-shadow: 0 0 6px rgba(139, 92, 246, 0.5); }
         .shadow-glow-blue { box-shadow: 0 0 6px rgba(59, 130, 246, 0.5); }
         .shadow-glow-emerald { box-shadow: 0 0 6px rgba(16, 185, 129, 0.5); }
-        .shadow-glow-yellow { box-shadow: 0 0 6px rgba(245, 158, 11, 0.5); }
+        .shadow-glow-amber { box-shadow: 0 0 6px rgba(245, 158, 11, 0.5); }
         .shadow-glow-red { box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
       `}</style>
     </div>
   )

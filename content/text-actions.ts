@@ -11,6 +11,8 @@ import {
   IconCopy,
   IconReset,
   IconReview,
+  IconSave,
+  // IconSave,
   IconSecurity,
   IconTest
 } from "~components/helpers/icons"
@@ -32,6 +34,7 @@ import {
   popupTextarea,
   popupTitleStyle,
   pulseKeyframes,
+  rowStyle,
   spinnerKeyframes
 } from "~styles/style"
 
@@ -42,6 +45,8 @@ import {
   generateTestsSmart,
   reviewCodeSmart
 } from "../handlers/modelRouter"
+// Import the save handler
+import { saveCodeSmart } from "../handlers/saveHandler"
 
 // Global state to track if popup is open
 let isPopupOpen = false
@@ -157,6 +162,34 @@ function openPopup(selectedText: string) {
     console.log("[InsightLens] Code reset to original")
   }
 
+  // Save button to save the current code
+  const saveBtn = document.createElement("button")
+  saveBtn.style.cssText = copyBtnStyle
+  saveBtn.innerHTML = IconSave // Use icon if available, fallback to emoji IconSave ||
+  saveBtn.title = "Save code"
+  saveBtn.onclick = (e) => {
+    e.stopPropagation()
+
+    // Toggle the save input row
+    if (saveInputRow && saveInputRow.parentElement) {
+      // Hide if already visible
+      saveInputRow.remove()
+      saveInputRow = null
+    } else {
+      // Show save input row
+      saveInputRow = createSaveInputRow()
+      // Insert it below the action buttons but above any existing ask input
+      const insertBefore = askInputRow ? askInputRow : btnRow.nextSibling
+      popup.insertBefore(saveInputRow, insertBefore)
+
+      // Hide ask input if it's open to avoid overlap
+      if (askInputRow) {
+        askInputRow.remove()
+        askInputRow = null
+      }
+    }
+  }
+
   const copyBtn = document.createElement("button")
   copyBtn.style.cssText = copyBtnStyle
   copyBtn.innerHTML = IconCopy
@@ -181,7 +214,8 @@ function openPopup(selectedText: string) {
     popup.remove()
     removeExistingMenu() // ensure the floating icon is actually removed
   }
-  controls.append(resetBtn, copyBtn, closeBtn)
+
+  controls.append(resetBtn, saveBtn, copyBtn, closeBtn)
   header.append(title, controls)
 
   const textarea = document.createElement("textarea")
@@ -199,6 +233,132 @@ function openPopup(selectedText: string) {
 
   const btnRow = document.createElement("div")
   btnRow.style.cssText = popupButtonsRow
+
+  // Variables to track input rows
+  let askInputRow: HTMLDivElement | null = null
+  let saveInputRow: HTMLDivElement | null = null
+
+  // Create Save Input Row (similar to Ask Input Row)
+  function createSaveInputRow(): HTMLDivElement {
+    const row = document.createElement("div")
+    row.style.cssText = rowStyle
+
+    // Input field for snippet name
+    const input = document.createElement("input")
+    input.type = "text"
+    input.placeholder = "Enter snippet name (e.g., utils.js, auth logic)..."
+    input.style.cssText = askInputStyle
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") {
+        ev.preventDefault()
+        handleSave()
+      } else if (ev.key === "Escape") {
+        ev.preventDefault()
+        row.remove()
+        saveInputRow = null
+      }
+    })
+
+    // Save button
+    const saveConfirmBtn = document.createElement("button")
+    saveConfirmBtn.textContent = "Save"
+    saveConfirmBtn.style.cssText = `
+      flex: 1;
+      padding: 8px 10px;
+      font-weight: 600;
+      color: #fff;
+      ${actionButtonBase + actionButtonGradient2}
+    `
+    saveConfirmBtn.addEventListener("click", async (ev) => {
+      ev.stopPropagation()
+      await handleSave()
+    })
+
+    // Cancel button
+    const cancelBtn = document.createElement("button")
+    cancelBtn.textContent = "Cancel"
+    cancelBtn.style.cssText = `
+  flex: 1;
+  padding: 8px 10px;
+  font-weight: 600;
+  color: #fff;
+  ${actionButtonBase + actionButtonGradient}
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  opacity: 0.9;
+`
+
+    // Add hover effects
+    cancelBtn.addEventListener("mouseenter", () => {
+      cancelBtn.style.backgroundColor = "rgba(255, 255, 255, 0.1)"
+      cancelBtn.style.borderColor = "rgba(255, 255, 255, 0.3)"
+    })
+
+    cancelBtn.addEventListener("mouseleave", () => {
+      cancelBtn.style.backgroundColor = "rgba(255, 255, 255, 0.05)"
+      cancelBtn.style.borderColor = "rgba(255, 255, 255, 0.2)"
+    })
+    cancelBtn.addEventListener("click", (ev) => {
+      ev.stopPropagation()
+      row.remove()
+      saveInputRow = null
+    })
+
+    async function handleSave() {
+      const name = input.value.trim()
+      if (!name) {
+        // Show validation - focus and highlight input
+        input.style.borderColor = "#ef4444"
+        input.focus()
+        return
+      }
+
+      // Disable UI + show loader
+      input.disabled = true
+      saveConfirmBtn.disabled = true
+      cancelBtn.disabled = true
+      const originalContent = saveConfirmBtn.innerHTML
+      saveConfirmBtn.innerHTML = loaderButtonStyle
+
+      try {
+        await saveCodeSmart(name, textarea.value)
+        console.log("[InsightLens] Code saved successfully")
+
+        // Show success and remove the input row
+        saveConfirmBtn.innerHTML = "✓ Saved!"
+        setTimeout(() => {
+          row.remove()
+          saveInputRow = null
+        }, 1000)
+      } catch (err) {
+        console.error("[InsightLens] Save failed:", err)
+
+        // Show error
+        saveConfirmBtn.innerHTML = "✗ Error"
+        setTimeout(() => {
+          saveConfirmBtn.innerHTML = originalContent
+          input.disabled = false
+          saveConfirmBtn.disabled = false
+          cancelBtn.disabled = false
+        }, 1000)
+      }
+    }
+
+    row.appendChild(input)
+    row.appendChild(saveConfirmBtn)
+    row.appendChild(cancelBtn)
+
+    // Focus input immediately
+    setTimeout(() => {
+      input.focus()
+      input.select()
+    }, 0)
+
+    return row
+  }
 
   function createActionButton(
     svg: string,
@@ -289,9 +449,6 @@ function openPopup(selectedText: string) {
     actionButtonGradient2,
     generateTestsSmart
   )
-  // We will hold the live session for this popup here
-  let interactiveSession: any = null
-  let askInputRow: HTMLDivElement | null = null
 
   // Create the Ask toggle button (similar styles to other buttons)
   function createAskInteractiveButton() {
@@ -311,7 +468,14 @@ function openPopup(selectedText: string) {
         // show
         askInputRow = createAskInputRow()
         // place it just below the btnRow
-        popup.insertBefore(askInputRow, btnRow.nextSibling)
+        const insertBefore = saveInputRow ? saveInputRow : btnRow.nextSibling
+        popup.insertBefore(askInputRow, insertBefore)
+
+        // Hide save input if it's open to avoid overlap
+        if (saveInputRow) {
+          saveInputRow.remove()
+          saveInputRow = null
+        }
       }
     })
 

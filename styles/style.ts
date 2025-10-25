@@ -306,3 +306,11 @@ export const loaderButtonStyle = `
       <div class="spinner" style="width:12px;height:12px;border:2px solid transparent;border-top:2px solid currentColor;border-radius:50%;animation:spin 1s linear infinite"></div>
       <span style="font-weight:600;font-size:13px">Processing...</span>
     </div>`
+
+export const rowStyle = `
+      margin-top: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    `
