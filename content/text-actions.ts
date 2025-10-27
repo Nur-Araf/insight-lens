@@ -1,4 +1,6 @@
 /* content/text-actions.tsx */
+import { Storage } from "@plasmohq/storage"
+
 import {
   isLikelyCode,
   makeDraggableFixed,
@@ -16,6 +18,8 @@ import {
   IconSecurity,
   IconTest
 } from "~components/helpers/icons"
+import { attachSelectionListener } from "~handlers/selectionHandler"
+import type { PlasmoCSConfig } from "~node_modules/plasmo/dist/type"
 import {
   actionButtonBase,
   actionButtonGradient,
@@ -47,7 +51,12 @@ import {
 } from "../handlers/modelRouter"
 // Import the save handler
 import { saveCodeSmart } from "../handlers/saveHandler"
-import { attachSelectionListener } from "~handlers/selectionHandler"
+
+const storage = new Storage()
+
+export const config: PlasmoCSConfig = {
+  matches: ["<all_urls>"]
+}
 
 // Global state to track if popup is open
 let isPopupOpen = false
@@ -640,39 +649,6 @@ function setupContextMenu() {
   })
 }
 
-waitForDOMReady(() => {
-  console.log("[InsightLens] DOM ready - initializing InsightLens UI")
-
-  // Attach new selection listener
-  attachSelectionListener((selection) => {
-    if (!selection) {
-      removeExistingMenu()
-      return
-    }
-
-    // Create the floating icon when valid code is selected
-    createFloatingIcon(selection.x, selection.y, selection.text)
-  })
-
-  // Context menu setup (optional, safe to keep)
-  setupContextMenu()
-
-  // Add global styles (keep this!)
-  const globalStyles = document.createElement("style")
-  globalStyles.textContent = `
-    #insightlens-menu, #insightlens-popup {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      z-index: 1000000;
-    }
-
-    #insightlens-popup {
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-    }
-  `
-  document.head.appendChild(globalStyles)
-})
-
 // Listen for background requests to open the popup (from service worker)
 // background message will open an EMPTY popup (no clipboard access)
 if (
@@ -706,3 +682,82 @@ if (
 const globalStyles = document.createElement("style")
 globalStyles.textContent = globalStylesString
 document.head.appendChild(globalStyles)
+
+let isInitialized = false
+
+async function initInsightLens() {
+  if (isInitialized) return
+  isInitialized = true
+
+  console.log("[InsightLens] Initializing...")
+
+  waitForDOMReady(() => {
+    console.log("[InsightLens] DOM ready - initializing InsightLens UI")
+
+    attachSelectionListener((selection) => {
+      if (!selection) {
+        removeExistingMenu()
+        return
+      }
+      createFloatingIcon(selection.x, selection.y, selection.text)
+    })
+
+    setupContextMenu()
+
+    const globalStyles = document.createElement("style")
+    globalStyles.textContent = `
+      #insightlens-menu, #insightlens-popup {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        z-index: 1000000;
+      }
+
+      #insightlens-popup {
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+    `
+    document.head.appendChild(globalStyles)
+  })
+}
+
+function destroyInsightLens() {
+  console.log("[InsightLens] Cleaning up UI & listeners")
+  removeExistingMenu()
+  removeExistingPopup()
+  isPopupOpen = false
+  isInitialized = false
+}
+
+// --- Initial load ---
+storage.get("isExtensionEnabled").then((enabled) => {
+  // Convert stored value to boolean safely
+  const isEnabled =
+    typeof enabled === "boolean"
+      ? enabled
+      : String(enabled).toLowerCase() === "true"
+
+  if (!isEnabled) {
+    console.log("[InsightLens] Extension disabled — not starting.")
+  } else {
+    initInsightLens()
+  }
+})
+
+// --- Watch for changes ---
+storage.watch({
+  isExtensionEnabled: (change: any) => {
+    // The watcher can pass a StorageChange object (with .newValue) or the raw value.
+    const raw =
+      change && typeof change === "object" && "newValue" in change
+        ? change.newValue
+        : change
+    const isEnabled = raw === true || raw === "true"
+    console.log("[InsightLens] Storage changed:", isEnabled)
+
+    if (!isEnabled) {
+      destroyInsightLens()
+    } else {
+      initInsightLens()
+    }
+  }
+})

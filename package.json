@@ -62,8 +62,8 @@
     "commands": {
       "trigger-review": {
         "suggested_key": {
-          "default": "Ctrl+Shift+R",
-          "mac": "Command+Shift+R"
+          "default": "Ctrl+Shift+E",
+          "mac": "Command+Shift+E"
         },
         "description": "Trigger code review on selected text"
       }

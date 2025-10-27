@@ -31,6 +31,10 @@ import { SavedCodesView } from "~components/features/SavedCode"
 
 // Main popup component
 export default function IndexPopup() {
+  const [isExtensionEnabled, setIsExtensionEnabled] = useStorage<boolean>(
+    "isExtensionEnabled",
+    (v) => (v === undefined ? true : v)
+  )
   const [isNotification, setIsNotification] = useStorage<boolean>(
     "isNotification",
     (v) => (v === undefined ? true : v)
@@ -50,6 +54,7 @@ export default function IndexPopup() {
 
   React.useEffect(() => {
     const initializeDefaults = async () => {
+      if (isExtensionEnabled === undefined) await setIsExtensionEnabled(true)
       if (isNotification === undefined) await setIsNotification(true)
       if (responseStyle === undefined) await setResponseStyle("short")
       if (apiMode === undefined) await setApiMode("local")
@@ -106,22 +111,60 @@ export default function IndexPopup() {
             AI-Powered Code Analysis
           </p>
         </div>
-        <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-to-r from-green-500/20 to-emerald-500/20 ring-1 ring-green-500/30 backdrop-blur-sm">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-xs font-medium text-green-400">Active</span>
+        <div
+          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full backdrop-blur-sm transition-all duration-300 ${
+            isExtensionEnabled
+              ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20 ring-1 ring-green-500/30"
+              : "bg-gradient-to-r from-red-500/20 to-pink-500/20 ring-1 ring-red-500/30"
+          }`}>
+          <div
+            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+              isExtensionEnabled ? "bg-green-400 animate-pulse" : "bg-red-400"
+            }`}
+          />
+          <span
+            className={`text-xs font-medium transition-all duration-300 ${
+              isExtensionEnabled ? "text-green-400" : "text-red-400"
+            }`}>
+            {isExtensionEnabled ? "Active" : "Disabled"}
+          </span>
         </div>
       </header>
 
       {/* Analysis Settings Section */}
       <section className="mb-3 relative z-10">
-        <h3 className="text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-          <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse"></div>
-          AI Analysis
-        </h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-semibold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse"></div>
+            AI Analysis
+          </h3>
+          {/* Extension Toggle Switch */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-white/60">Extension</span>
+            <button
+              onClick={() => setIsExtensionEnabled(!isExtensionEnabled)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 ${
+                isExtensionEnabled
+                  ? "bg-gradient-to-r from-cyan-500 to-blue-500"
+                  : "bg-gray-600"
+              }`}>
+              <span
+                className={`inline-block h-3 w-3 transform rounded-full bg-white transition-all duration-300 ${
+                  isExtensionEnabled ? "translate-x-5" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
 
         <div className="space-y-2">
           {/* API Mode */}
-          <div className="p-2 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 ring-cyan-500/20 backdrop-blur-sm hover:ring-cyan-500/30 transition-all duration-300">
+          <div
+            className={`p-2 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 backdrop-blur-sm transition-all duration-300 ${
+              isExtensionEnabled
+                ? "ring-cyan-500/20 hover:ring-cyan-500/30"
+                : "ring-gray-500/20 opacity-50"
+            }`}>
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-1.5 min-w-0">
                 <FiCpu className="text-cyan-400 text-xs" />
@@ -130,24 +173,26 @@ export default function IndexPopup() {
                 </span>
               </div>
               <div
-                className={`flex p-0.5 rounded-lg bg-white/5 ring-1 ring-white/10 ${apiMode === "gemini" ? "justify-end" : "justify-start"}`}>
+                className={`flex p-0.5 rounded-lg bg-white/5 ring-1 ring-white/10 ${apiMode === "gemini" ? "justify-end" : "justify-start"} ${
+                  !isExtensionEnabled ? "opacity-50" : ""
+                }`}>
                 <button
-                  onClick={() => setApiMode("local")}
+                  onClick={() => isExtensionEnabled && setApiMode("local")}
                   className={`px-2 py-0.5 rounded text-xs transition-all duration-200 flex items-center gap-1 ${
                     apiMode === "local"
                       ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25"
                       : "text-white/70 hover:text-white"
-                  }`}>
+                  } ${!isExtensionEnabled ? "cursor-not-allowed" : ""}`}>
                   <FiShield className="text-xs" />
                   Local
                 </button>
                 <button
-                  onClick={() => setApiMode("gemini")}
+                  onClick={() => isExtensionEnabled && setApiMode("gemini")}
                   className={`px-2 py-0.5 rounded text-xs transition-all duration-200 flex items-center gap-1 ${
                     apiMode === "gemini"
                       ? "bg-gradient-to-r from-purple-500 to-cyan-500 text-white shadow-lg shadow-purple-500/25"
                       : "text-white/70 hover:text-white"
-                  }`}>
+                  } ${!isExtensionEnabled ? "cursor-not-allowed" : ""}`}>
                   <FiGlobe className="text-xs" />
                   Gemini
                 </button>
@@ -169,7 +214,12 @@ export default function IndexPopup() {
           </div>
 
           {/* Response Style */}
-          <div className="p-2 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 ring-purple-500/20 backdrop-blur-sm hover:ring-purple-500/30 transition-all duration-300">
+          <div
+            className={`p-2 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 backdrop-blur-sm transition-all duration-300 ${
+              isExtensionEnabled
+                ? "ring-purple-500/20 hover:ring-purple-500/30"
+                : "ring-gray-500/20 opacity-50"
+            }`}>
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-1.5 min-w-0">
                 <FiFileText className="text-purple-400 text-xs" />
@@ -178,24 +228,30 @@ export default function IndexPopup() {
                 </span>
               </div>
               <div
-                className={`flex p-0.5 rounded-lg bg-white/5 ring-1 ring-white/10 ${responseStyle === "detailed" ? "justify-end" : "justify-start"}`}>
+                className={`flex p-0.5 rounded-lg bg-white/5 ring-1 ring-white/10 ${responseStyle === "detailed" ? "justify-end" : "justify-start"} ${
+                  !isExtensionEnabled ? "opacity-50" : ""
+                }`}>
                 <button
-                  onClick={() => setResponseStyle("short")}
+                  onClick={() =>
+                    isExtensionEnabled && setResponseStyle("short")
+                  }
                   className={`px-2 py-0.5 rounded text-xs transition-all duration-200 flex items-center gap-1 ${
                     responseStyle === "short"
                       ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25"
                       : "text-white/70 hover:text-white"
-                  }`}>
+                  } ${!isExtensionEnabled ? "cursor-not-allowed" : ""}`}>
                   <FiZap className="text-xs" />
                   Fast
                 </button>
                 <button
-                  onClick={() => setResponseStyle("detailed")}
+                  onClick={() =>
+                    isExtensionEnabled && setResponseStyle("detailed")
+                  }
                   className={`px-2 py-0.5 rounded text-xs transition-all duration-200 flex items-center gap-1 ${
                     responseStyle === "detailed"
                       ? "bg-gradient-to-r from-purple-500 to-cyan-500 text-white shadow-lg shadow-purple-500/25"
                       : "text-white/70 hover:text-white"
-                  }`}>
+                  } ${!isExtensionEnabled ? "cursor-not-allowed" : ""}`}>
                   <FiFileText className="text-xs" />
                   Full
                 </button>
@@ -227,7 +283,12 @@ export default function IndexPopup() {
 
         <div className="space-y-2">
           {/* Notifications */}
-          <div className="p-2 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 ring-emerald-500/20 backdrop-blur-sm hover:ring-emerald-500/30 transition-all duration-300">
+          <div
+            className={`p-2 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 backdrop-blur-sm transition-all duration-300 ${
+              isExtensionEnabled
+                ? "ring-emerald-500/20 hover:ring-emerald-500/30"
+                : "ring-gray-500/20 opacity-50"
+            }`}>
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-1.5 min-w-0">
                 <FiBell className="text-emerald-400 text-xs" />
@@ -236,23 +297,25 @@ export default function IndexPopup() {
                 </span>
               </div>
               <div
-                className={`flex p-0.5 rounded-lg bg-white/5 ring-1 ring-white/10 ${isNotification ? "justify-end" : "justify-start"}`}>
+                className={`flex p-0.5 rounded-lg bg-white/5 ring-1 ring-white/10 ${isNotification ? "justify-end" : "justify-start"} ${
+                  !isExtensionEnabled ? "opacity-50" : ""
+                }`}>
                 <button
-                  onClick={() => setIsNotification(false)}
+                  onClick={() => isExtensionEnabled && setIsNotification(false)}
                   className={`px-2 py-0.5 rounded text-xs transition-all duration-200 ${
                     !isNotification
                       ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25"
                       : "text-white/70 hover:text-white"
-                  }`}>
+                  } ${!isExtensionEnabled ? "cursor-not-allowed" : ""}`}>
                   Off
                 </button>
                 <button
-                  onClick={() => setIsNotification(true)}
+                  onClick={() => isExtensionEnabled && setIsNotification(true)}
                   className={`px-2 py-0.5 rounded text-xs transition-all duration-200 ${
                     isNotification
                       ? "bg-gradient-to-r from-purple-500 to-cyan-500 text-white shadow-lg shadow-purple-500/25"
                       : "text-white/70 hover:text-white"
-                  }`}>
+                  } ${!isExtensionEnabled ? "cursor-not-allowed" : ""}`}>
                   On
                 </button>
               </div>
@@ -283,8 +346,12 @@ export default function IndexPopup() {
 
         <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => setCurrentView("saved")}
-            className="p-3 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 ring-cyan-500/20 backdrop-blur-sm hover:ring-cyan-500/30 transition-all duration-300 group text-left">
+            onClick={() => isExtensionEnabled && setCurrentView("saved")}
+            className={`p-3 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 backdrop-blur-sm transition-all duration-300 group text-left ${
+              isExtensionEnabled
+                ? "ring-cyan-500/20 hover:ring-cyan-500/30"
+                : "ring-gray-500/20 opacity-50"
+            }`}>
             <div className="flex items-center gap-2 mb-1">
               <FiSave className="text-cyan-400 text-sm" />
               <span className="text-xs font-medium text-white/90">
@@ -317,39 +384,78 @@ export default function IndexPopup() {
             <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse"></div>
             Current Settings
           </h3>
-          <div className="flex items-center gap-1 text-cyan-300/70 text-xs">
+          <div
+            className={`flex items-center gap-1 text-xs transition-all duration-300 ${
+              isExtensionEnabled ? "text-cyan-300/70" : "text-red-300/70"
+            }`}>
             <FiLock className="text-xs" />
-            <span>Secure</span>
+            <span>{isExtensionEnabled ? "Secure" : "Disabled"}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-1 text-xs">
           <div className="flex items-center gap-1.5">
             <div
-              className={`w-1.5 h-1.5 rounded-full ${apiMode === "local" ? "bg-cyan-400 shadow-glow-cyan" : "bg-purple-400 shadow-glow-purple"}`}
+              className={`w-1.5 h-1.5 rounded-full ${
+                isExtensionEnabled
+                  ? apiMode === "local"
+                    ? "bg-cyan-400 shadow-glow-cyan"
+                    : "bg-purple-400 shadow-glow-purple"
+                  : "bg-gray-400"
+              }`}
             />
             <span className="text-white/70">
-              {apiMode === "local" ? "Local AI" : "Gemini API"}
+              {isExtensionEnabled
+                ? apiMode === "local"
+                  ? "Local AI"
+                  : "Gemini API"
+                : "Extension Off"}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
             <div
-              className={`w-1.5 h-1.5 rounded-full ${responseStyle === "short" ? "bg-cyan-400 shadow-glow-cyan" : "bg-purple-400 shadow-glow-purple"}`}
+              className={`w-1.5 h-1.5 rounded-full ${
+                isExtensionEnabled && responseStyle === "short"
+                  ? "bg-cyan-400 shadow-glow-cyan"
+                  : isExtensionEnabled
+                    ? "bg-purple-400 shadow-glow-purple"
+                    : "bg-gray-400"
+              }`}
             />
             <span className="text-white/70">
-              {responseStyle === "short" ? "Fast Mode" : "Full Mode"}
+              {isExtensionEnabled
+                ? responseStyle === "short"
+                  ? "Fast Mode"
+                  : "Full Mode"
+                : "All features off"}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
             <div
-              className={`w-1.5 h-1.5 rounded-full ${isNotification ? "bg-emerald-400 shadow-glow-emerald" : "bg-red-400 shadow-glow-red"}`}
+              className={`w-1.5 h-1.5 rounded-full ${
+                isExtensionEnabled && isNotification
+                  ? "bg-emerald-400 shadow-glow-emerald"
+                  : isExtensionEnabled
+                    ? "bg-red-400 shadow-glow-red"
+                    : "bg-gray-400"
+              }`}
             />
             <span className="text-white/70">
-              {isNotification ? "Alerts On" : "Alerts Off"}
+              {isExtensionEnabled
+                ? isNotification
+                  ? "Alerts On"
+                  : "Alerts Off"
+                : "Notifications off"}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-glow-amber" />
+            <div
+              className={`w-1.5 h-1.5 rounded-full ${
+                isExtensionEnabled
+                  ? "bg-amber-400 shadow-glow-amber"
+                  : "bg-gray-400"
+              }`}
+            />
             <span className="text-white/70">
               {Object.keys(savedCodes || {}).length} Saved
             </span>
@@ -358,7 +464,12 @@ export default function IndexPopup() {
       </section>
 
       {/* Quick Access Section */}
-      <section className="mb-3 p-2 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 ring-amber-500/20 backdrop-blur-sm relative z-10 hover:ring-amber-500/30 transition-all duration-300">
+      <section
+        className={`mb-3 p-2 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 backdrop-blur-sm relative z-10 transition-all duration-300 ${
+          isExtensionEnabled
+            ? "ring-amber-500/20 hover:ring-amber-500/30"
+            : "ring-gray-500/20 opacity-50"
+        }`}>
         <div className="flex items-center gap-2">
           <FiTarget className="text-amber-400 text-[10px]" />
           <div className="flex items-center gap-1 text-[11px] text-amber-300/80">
@@ -375,25 +486,24 @@ export default function IndexPopup() {
         </div>
       </section>
 
-      {/* Gemini Installation Notice */}
-      {/* {apiMode === "local" && (
-        <div className="mb-3 text-[10px] text-amber-300/70 text-center bg-amber-500/10 rounded-lg p-1.5 border border-amber-500/20 backdrop-blur-sm">
-          <span className="flex items-center justify-center gap-1">
-            <FiGlobe className="text-[10px]" />
-            Make sure you have Gemini Neno installed
-          </span>
-        </div>
-      )} */}
-
       {/* Enhanced Footer */}
-      <footer className="mt-3 pt-2 border-t border-white/10 relative z-10">
-        <div className="flex items-center justify-between text-xs text-white/40 mb-1">
+      <footer className="mt-2 pt-2 border-t border-white/10 relative z-10">
+        <div className="flex items-center justify-between text-xs text-white/40">
           <div className="flex items-center gap-1">
-            <FiCheck className="text-emerald-400 text-xs" />
-            <span>Ready to analyze</span>
+            <FiCheck
+              className={`text-xs transition-all duration-300 ${
+                isExtensionEnabled ? "text-emerald-400" : "text-red-400"
+              }`}
+            />
+            <span>
+              {isExtensionEnabled ? "Ready to analyze" : "Extension disabled"}
+            </span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse"></div>
+            <div
+              className={`w-1 h-1 rounded-full animate-pulse transition-all duration-300 ${
+                isExtensionEnabled ? "bg-cyan-400" : "bg-red-400"
+              }`}></div>
             <span>v2.0</span>
           </div>
         </div>
