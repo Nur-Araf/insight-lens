@@ -155,7 +155,7 @@ function addNewSection(
   const section = document.createElement("div")
   section.className = `code-section ${type}`
   section.innerHTML = escapeHtml(content)
-  section.contentEditable = "true"
+  section.contentEditable = type === "user-code" ? "true" : "false"
 
   // Add subtle focus styling
   section.addEventListener("focus", () => {
@@ -166,6 +166,30 @@ function addNewSection(
   section.addEventListener("blur", () => {
     section.style.outline = "none"
   })
+
+  // Insert separator above the new section if there is at least one section already
+  // and the last child isn't already a separator
+  const lastChild = editor.lastElementChild
+  if (
+    lastChild &&
+    lastChild.classList &&
+    !lastChild.classList.contains("section-separator")
+  ) {
+    const separator = document.createElement("div")
+    separator.className = "section-separator"
+    separator.innerHTML = "---"
+    separator.contentEditable = "false"
+    separator.style.cssText = `
+    text-align: center;
+    color: #6b7280;
+    margin: 4px 0;
+    font-style: italic;
+    user-select: none;
+    opacity: 0.5;
+    font-size: 11px;
+  `
+    editor.appendChild(separator)
+  }
 
   editor.appendChild(section)
 
@@ -539,9 +563,16 @@ function openPopup(selectedText: string) {
           currentCode = userSections[userSections.length - 1].textContent || ""
         }
 
-        const result = await handler(currentCode)
+        let result = await handler(currentCode)
 
-        // Add AI response as a new editable section (don't focus, but scroll to it)
+        // Normalize result: trim and collapse 3+ newlines to 2 newlines
+        if (typeof result === "string") {
+          result = result.trim().replace(/\n{3,}/g, "\n\n")
+        } else {
+          result = String(result)
+        }
+
+        // Add AI response as a new section
         addNewSection(editor, result, "ai-response", false, true)
 
         // Automatically create a new user code section for continued work (but don't focus it)
@@ -892,11 +923,13 @@ const enhancedGlobalStyles = `
   }
   
   .code-section.ai-response {
-    color: #10b981;
-    background: rgba(16, 185, 129, 0.08);
-    border-left: 2px solid #10b981;
-  }
-  
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.06); /* less opacity if you want */
+  border-left: 2px solid #10b981;
+  padding: 4px 8px; /* smaller padding */
+  margin-bottom: 2px;
+}
+
   .code-section.error {
     color: #ef4444;
     background: rgba(239, 68, 68, 0.08);
