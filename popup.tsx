@@ -475,7 +475,7 @@ export default function IndexPopup() {
           <div className="flex items-center gap-1 text-[11px] text-amber-300/80">
             <span>Press</span>
             <kbd className="px-1 py-0.5 bg-amber-500/20 rounded text-amber-300 border border-amber-500/30 font-medium text-[10px] mx-0.5">
-              Ctrl+Shift+R
+              Ctrl+Shift+E
             </kbd>
             <span>Or</span>
             <FiMousePointer className="text-amber-400/70 text-[10px] mx-0.5" />

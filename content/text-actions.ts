@@ -14,7 +14,6 @@ import {
   IconReset,
   IconReview,
   IconSave,
-  // IconSave,
   IconSecurity,
   IconTest
 } from "~components/helpers/icons"
@@ -134,6 +133,74 @@ function createFloatingIcon(x: number, y: number, selectedText: string) {
   document.addEventListener("keydown", handleEscape)
 }
 
+// Helper function to escape HTML
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
+}
+
+// Helper function to add a new section with proper styling
+function addNewSection(
+  editor: HTMLDivElement,
+  content: string,
+  type: "user-code" | "ai-response" | "user-question" | "error" = "user-code",
+  focus: boolean = true
+) {
+  const section = document.createElement("div")
+  section.className = `code-section ${type}`
+  section.innerHTML = escapeHtml(content)
+  section.contentEditable = "true"
+
+  // Add subtle focus styling
+  section.addEventListener("focus", () => {
+    section.style.outline = "1px solid rgba(59, 130, 246, 0.5)"
+    section.style.outlineOffset = "1px"
+  })
+
+  section.addEventListener("blur", () => {
+    section.style.outline = "none"
+  })
+
+  editor.appendChild(section)
+
+  // Add separator between sections (except for the very first section)
+  if (editor.children.length > 1) {
+    const separator = document.createElement("div")
+    separator.className = "section-separator"
+    separator.innerHTML = "---"
+    separator.contentEditable = "false"
+    separator.style.cssText = `
+      text-align: center;
+      color: #6b7280;
+      margin: 8px 0;
+      font-style: italic;
+      user-select: none;
+      opacity: 0.7;
+    `
+    editor.appendChild(separator)
+  }
+
+  // Focus the new section only if requested
+  if (focus) {
+    setTimeout(() => {
+      section.focus()
+      // Move cursor to end
+      const range = document.createRange()
+      range.selectNodeContents(section)
+      range.collapse(false)
+      const selection = window.getSelection()
+      selection.removeAllRanges()
+      selection.addRange(range)
+    }, 0)
+  }
+
+  return section
+}
+
 // --- Popup UI ---
 function openPopup(selectedText: string) {
   removeExistingPopup()
@@ -168,14 +235,16 @@ function openPopup(selectedText: string) {
   resetBtn.title = "Reset to original code"
   resetBtn.onclick = (e) => {
     e.stopPropagation()
-    textarea.value = originalText
+    // Clear all sections and add original code
+    editor.innerHTML = ""
+    addNewSection(editor, originalText, "user-code")
     console.log("[InsightLens] Code reset to original")
   }
 
   // Save button to save the current code
   const saveBtn = document.createElement("button")
   saveBtn.style.cssText = copyBtnStyle
-  saveBtn.innerHTML = IconSave // Use icon if available, fallback to emoji IconSave ||
+  saveBtn.innerHTML = IconSave
   saveBtn.title = "Save code"
   saveBtn.onclick = (e) => {
     e.stopPropagation()
@@ -207,12 +276,29 @@ function openPopup(selectedText: string) {
   copyBtn.onclick = (e) => {
     e.stopPropagation()
     try {
-      navigator.clipboard.writeText(textarea.value)
+      // Copy all text content from all sections
+      const sections = editor.querySelectorAll(".code-section")
+      let fullText = ""
+      sections.forEach((section, index) => {
+        if (index > 0) fullText += "\n---\n"
+        fullText += section.textContent
+      })
+      navigator.clipboard.writeText(fullText)
       console.log("[InsightLens] Code copied to clipboard")
     } catch (err) {
       // ignore clipboard errors for copy
       console.warn("[InsightLens] copy to clipboard failed:", err)
     }
+  }
+
+  // Add new section button
+  const addSectionBtn = document.createElement("button")
+  addSectionBtn.style.cssText = copyBtnStyle
+  addSectionBtn.innerHTML = "+"
+  addSectionBtn.title = "Add new code section"
+  addSectionBtn.onclick = (e) => {
+    e.stopPropagation()
+    addNewSection(editor, "// Start typing your code here...", "user-code")
   }
 
   const closeBtn = document.createElement("button")
@@ -225,21 +311,33 @@ function openPopup(selectedText: string) {
     removeExistingMenu() // ensure the floating icon is actually removed
   }
 
-  controls.append(resetBtn, saveBtn, copyBtn, closeBtn)
+  controls.append(resetBtn, saveBtn, addSectionBtn, copyBtn, closeBtn)
   header.append(title, controls)
 
-  const textarea = document.createElement("textarea")
-  textarea.style.cssText =
+  // Create the main editor container
+  const editor = document.createElement("div")
+  editor.style.cssText =
     popupTextarea +
     `
-  height: 300px;          /* reduce so ask row is visible below */
-  min-height: 300px;
-  max-height: calc(60vh - 80px); /* leave space for buttons/ask row */
-  resize: vertical;
-`
-  // IMPORTANT: we intentionally set the textarea to empty so no clipboard permission is needed
-  textarea.value = selectedText || ""
-  textarea.setAttribute("aria-label", "Selected code snippet")
+    height: 300px;
+    min-height: 300px;
+    max-height: calc(60vh - 80px);
+    resize: vertical;
+    overflow: auto;
+    white-space: pre-wrap;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 12px;
+  `
+  editor.setAttribute("aria-label", "Code editor with syntax coloring")
+
+  // Add initial section with the selected text
+  addNewSection(
+    editor,
+    selectedText || "// Paste or type your code here...",
+    "user-code"
+  )
 
   const btnRow = document.createElement("div")
   btnRow.style.cssText = popupButtonsRow
@@ -288,18 +386,18 @@ function openPopup(selectedText: string) {
     const cancelBtn = document.createElement("button")
     cancelBtn.textContent = "Cancel"
     cancelBtn.style.cssText = `
-  flex: 1;
-  padding: 8px 10px;
-  font-weight: 600;
-  color: #fff;
-  ${actionButtonBase + actionButtonGradient}
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 13px;
-  opacity: 0.9;
-`
+      flex: 1;
+      padding: 8px 10px;
+      font-weight: 600;
+      color: #fff;
+      ${actionButtonBase + actionButtonGradient}
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 13px;
+      opacity: 0.9;
+    `
 
     // Add hover effects
     cancelBtn.addEventListener("mouseenter", () => {
@@ -334,7 +432,15 @@ function openPopup(selectedText: string) {
       saveConfirmBtn.innerHTML = loaderButtonStyle
 
       try {
-        await saveCodeSmart(name, textarea.value)
+        // Get all text content from all sections
+        const sections = editor.querySelectorAll(".code-section")
+        let fullCode = ""
+        sections.forEach((section, index) => {
+          if (index > 0) fullCode += "\n---\n"
+          fullCode += section.textContent
+        })
+
+        await saveCodeSmart(name, fullCode)
         console.log("[InsightLens] Code saved successfully")
 
         // Show success and remove the input row
@@ -410,12 +516,37 @@ function openPopup(selectedText: string) {
       button.innerHTML = loaderButtonStyle
 
       try {
-        const result = await handler(textarea.value)
-        textarea.value = result
+        // Get current user code from the last user-code section
+        const userSections = editor.querySelectorAll(".code-section.user-code")
+        let currentCode = ""
+        if (userSections.length > 0) {
+          currentCode = userSections[userSections.length - 1].textContent || ""
+        }
+
+        const result = await handler(currentCode)
+
+        // Add AI response as a new editable section (but don't focus on it)
+        addNewSection(editor, result, "ai-response", false)
+
+        // Automatically create a new user code section for continued work
+        addNewSection(
+          editor,
+          "// Continue your code here...",
+          "user-code",
+          true
+        )
+
         console.log(`[InsightLens] ${label} action completed`)
       } catch (err) {
         console.error(`[InsightLens] ${label} action failed:`, err)
-        textarea.value = `Error in ${label}: ${err instanceof Error ? err.message : String(err)}`
+
+        // Show error in error section (don't focus on it)
+        addNewSection(
+          editor,
+          `Error in ${label}: ${err instanceof Error ? err.message : String(err)}`,
+          "error",
+          false
+        )
       } finally {
         button.disabled = false
         button.style.opacity = "1"
@@ -508,12 +639,12 @@ function openPopup(selectedText: string) {
   function createAskInputRow() {
     const row = document.createElement("div")
     row.style.cssText = `
-    margin-top: 10px;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  `
+      margin-top: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    `
 
     // Input field — takes 4 parts of width
     const input = document.createElement("input")
@@ -532,18 +663,18 @@ function openPopup(selectedText: string) {
     const sendBtn = document.createElement("button")
     sendBtn.textContent = "Send"
     sendBtn.style.cssText = `
-    flex: 1;
-    padding: 8px 10px;
-    font-weight: 600;
-    color: #fff;
-    ${actionButtonBase + actionButtonGradient2}
-  `
+      flex: 1;
+      padding: 8px 10px;
+      font-weight: 600;
+      color: #fff;
+      ${actionButtonBase + actionButtonGradient2}
+    `
     sendBtn.addEventListener("click", async (ev) => {
       ev.stopPropagation()
       await sendAskQuestion()
     })
 
-    //  Send logic
+    // Send logic
     async function sendAskQuestion() {
       const q = input.value.trim()
       if (!q) return
@@ -554,21 +685,50 @@ function openPopup(selectedText: string) {
       const originalContent = sendBtn.innerHTML
       sendBtn.innerHTML = loaderButtonStyle
 
-      // Immediately show question and "Processing…" BEFORE any await
-      const originalCode = textarea.value.trim()
-      textarea.value = `${originalCode}\n\n---\nQ: ${q}\nAI: Processing...`
-
       try {
-        // Ask the AI directly using the global session
-        const response = await askWithSessionSmart(q, textarea.value)
+        // Get current code from user sections
+        const userSections = editor.querySelectorAll(".code-section.user-code")
+        let currentCode = ""
+        userSections.forEach((section) => {
+          currentCode += section.textContent + "\n"
+        })
 
-        textarea.value = `${originalCode}\n\n---\nQ: ${q}\nAI: ${response.trim()}`
+        // Add question as a new section (don't focus on it)
+        addNewSection(editor, `Q: ${q}`, "user-question", false)
+
+        // Add processing message (don't focus on it)
+        const processingSection = addNewSection(
+          editor,
+          "AI: Processing...",
+          "ai-response",
+          false
+        )
+
+        // Ask the AI directly using the global session
+        const response = await askWithSessionSmart(q, currentCode)
+
+        // Replace processing message with actual response
+        processingSection.innerHTML = `AI: ${escapeHtml(response.trim())}`
+
+        // Automatically create a new user code section for continued work
+        addNewSection(
+          editor,
+          "// Continue your code here...",
+          "user-code",
+          true
+        )
 
         // Reset input field
         input.value = ""
         input.focus()
       } catch (err) {
-        textarea.value = `Error: ${err instanceof Error ? err.message : String(err)}`
+        // Show error (don't focus on it)
+        addNewSection(
+          editor,
+          `Error: ${err instanceof Error ? err.message : String(err)}`,
+          "error",
+          false
+        )
       } finally {
         // Restore send button
         sendBtn.innerHTML = originalContent
@@ -586,7 +746,7 @@ function openPopup(selectedText: string) {
   const askInteractiveBtn = createAskInteractiveButton()
 
   btnRow.append(reviewBtn, securityBtn, testBtn, answerBtn, askInteractiveBtn)
-  popup.append(header, textarea, btnRow)
+  popup.append(header, editor, btnRow)
   document.body.appendChild(popup)
 
   // Center popup
@@ -595,16 +755,18 @@ function openPopup(selectedText: string) {
   popup.style.top = `${(window.innerHeight - rect.height) / 2}px`
   popup.style.visibility = "visible"
 
-  // focus the textarea so the user can type immediately
+  // Focus the first section
   try {
-    // small timeout to ensure element is in DOM & visible before focus
     setTimeout(() => {
-      textarea.focus()
-      // move cursor to end
-      textarea.selectionStart = textarea.selectionEnd = textarea.value.length
+      const firstSection = editor.querySelector(
+        ".code-section"
+      ) as HTMLDivElement
+      if (firstSection) {
+        firstSection.focus()
+      }
     }, 0)
   } catch (err) {
-    console.warn("[InsightLens] Unable to focus textarea:", err)
+    console.warn("[InsightLens] Unable to focus editor:", err)
   }
 
   makeDraggableFixed(popup, header)
@@ -678,9 +840,68 @@ if (
   })
 }
 
-// Add this to the end of your waitForDOMReady function
+// Update global styles to include color coding and section styling
+const enhancedGlobalStyles = `
+  ${globalStylesString}
+  
+  /* Color coding for different text types */
+  .code-section {
+    padding: 8px 12px;
+    margin: 4px 0;
+    border-radius: 6px;
+    white-space: pre-wrap;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    min-height: 20px;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+  
+  /* Subtle focus outline */
+  .code-section:focus {
+    outline: 1px solid rgba(59, 130, 246, 0.5);
+    outline-offset: 1px;
+  }
+  
+  .code-section.user-code {
+    color: #e5e7eb;
+    background: rgba(59, 130, 246, 0.1);
+    border-left: 3px solid #3b82f6;
+  }
+  
+  .code-section.ai-response {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    border-left: 3px solid #10b981;
+  }
+  
+  .code-section.error {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 3px solid #ef4444;
+  }
+  
+  .code-section.user-question {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+    border-left: 3px solid #f59e0b;
+    font-style: italic;
+  }
+  
+  .section-separator {
+    text-align: center;
+    color: #6b7280;
+    margin: 8px 0;
+    font-style: italic;
+    user-select: none;
+    opacity: 0.7;
+  }
+`
+
+// Add enhanced global styles
 const globalStyles = document.createElement("style")
-globalStyles.textContent = globalStylesString
+globalStyles.textContent = enhancedGlobalStyles
 document.head.appendChild(globalStyles)
 
 let isInitialized = false
