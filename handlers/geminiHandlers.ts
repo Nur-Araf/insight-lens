@@ -30,9 +30,9 @@ export async function callGemini(
         if (chrome.runtime.lastError) {
           reject(chrome.runtime.lastError)
         } else if (!res?.success) {
-          reject(new Error(res?.error || "Gemini request failed"))
+          reject(new Error(res?.error || "InsightLens request failed"))
         } else {
-          notify("Answer received from Gemini.", "success")
+          notify("Answer received from InsightLens.", "success")
           resolve(res.data)
         }
       }

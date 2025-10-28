@@ -294,19 +294,19 @@ export async function askWithSession(
   const cacheKey = responseCache.generateKey("ask", promptText, mode)
   const cached = responseCache.get(cacheKey)
   if (cached) {
-    notify("Answer received from Gemini (cache).", "success")
+    notify("Answer received from InsightLens (cache).", "success")
     return cached
   }
 
-  notify("Asking Gemini...", "start")
+  notify("Asking InsightLens...", "start")
   try {
     const prompt = await buildPrompt("explain", promptText)
     const res = await requestQueue.add(prompt)
     responseCache.set(cacheKey, res)
-    notify("Answer received from Gemini.", "success")
+    notify("Answer received from InsightLens.", "success")
     return res
   } catch (err: any) {
-    notify("Failed to get response from Gemini.", "error")
+    notify("Failed to get response from InsightLens.", "error")
     return `askWithSession error: ${err?.message ?? err}`
   }
 }
@@ -320,7 +320,7 @@ export async function reviewCode(text: string): Promise<string> {
     return cached
   }
 
-  notify("Gemini is reviewing your code...", "start")
+  notify("InsightLens is reviewing your code...", "start")
   try {
     const optimizedText = text.substring(0, 3000)
     const prompt = await buildPrompt("review", optimizedText)
@@ -343,7 +343,7 @@ export async function answerAi(text: string): Promise<string> {
     return cached
   }
 
-  notify("Gemini is analyzing request...", "start")
+  notify("InsightLens is analyzing request...", "start")
   try {
     const prompt = await buildPrompt("answer", text.substring(0, 3000))
     const res = await requestQueue.add(prompt)
@@ -369,7 +369,7 @@ export async function ask(text: string, question?: string): Promise<string> {
     return cached
   }
 
-  notify("Gemini is analyzing your code...", "start")
+  notify("InsightLens is analyzing your code...", "start")
   try {
     if (!codeAssistantSession) await initCodeAssistantSession()
     const q = question || "Explain what this code does and its purpose."
@@ -382,7 +382,7 @@ export async function ask(text: string, question?: string): Promise<string> {
     notify("Explanation ready!", "success")
     return res
   } catch (err: any) {
-    notify("Gemini failed to answer your question.", "error")
+    notify("InsightLens failed to answer your question.", "error")
     return `ask error: ${err.message || err}`
   }
 }

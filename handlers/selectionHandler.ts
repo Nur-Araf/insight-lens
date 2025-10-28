@@ -53,7 +53,7 @@ function handleSelection(e: MouseEvent) {
     x += 10
     y -= 10
 
-    // ✅ Add scroll offset — this fixes the “floating icon appears at top” bug
+    // Add scroll offset — this fixes the “floating icon appears at top” bug
     const scrollX = window.scrollX || document.documentElement.scrollLeft
     const scrollY = window.scrollY || document.documentElement.scrollTop
     x += scrollX

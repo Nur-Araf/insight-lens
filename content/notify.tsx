@@ -13,7 +13,7 @@ export const config: PlasmoCSConfig = {
 
 type NotificationData = { message: string }
 
-// --- ✅ Safe boolean parser ---
+// --- Safe boolean parser ---
 const toBoolean = (value: unknown): boolean => {
   if (typeof value === "boolean") return value
   if (typeof value === "string") return value.toLowerCase() === "true"

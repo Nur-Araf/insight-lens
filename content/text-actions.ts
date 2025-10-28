@@ -25,12 +25,17 @@ import {
   actionButtonGradient,
   actionButtonGradient2,
   actionButtonHover,
+  askButton,
   askInputStyle,
+  cancelStyle,
   closeBtnStyle,
   copyBtnStyle,
+  enhancedGlobalStyles,
   floatingIconBaseStyle,
   floatingIconHoverStyle,
   globalStylesString,
+  globalStyleText,
+  inputStyle,
   loaderButtonStyle,
   popupButtonsRow,
   popupHeaderStyle,
@@ -39,7 +44,11 @@ import {
   popupTitleStyle,
   pulseKeyframes,
   rowStyle,
-  spinnerKeyframes
+  sendButtonStyle,
+  separatorStyle,
+  separatorStyle2,
+  spinnerKeyframes,
+  textareaStyles
 } from "~styles/style"
 
 import {
@@ -63,8 +72,6 @@ let isPopupOpen = false
 
 // --- Floating icon ---
 function createFloatingIcon(x: number, y: number, selectedText: string) {
-  console.log("[InsightLens] Creating floating icon for selection")
-
   // Don't create icon if popup is already open
   if (isPopupOpen) {
     return
@@ -99,7 +106,6 @@ function createFloatingIcon(x: number, y: number, selectedText: string) {
   icon.addEventListener("click", (e) => {
     e.stopPropagation()
     e.preventDefault()
-    console.log("[InsightLens] Opening popup")
 
     // Mark popup as open
     isPopupOpen = true
@@ -157,14 +163,67 @@ function addNewSection(
   section.innerHTML = escapeHtml(content)
   section.contentEditable = type === "user-code" ? "true" : "false"
 
-  // Add subtle focus styling
+  // Add subtle focus styling + placeholder behavior
+  const placeholderVariants = [
+    "// Paste or type your code here...",
+    "// Continue your code here...",
+    "// Start typing your code here...",
+    "// Start typing your code here..."
+  ]
+  const contentTrim = content.trim()
+  const isPlaceholder =
+    type === "user-code" && placeholderVariants.includes(contentTrim)
+
+  if (isPlaceholder) {
+    // visually mark as placeholder (muted + italic)
+    section.dataset.placeholder = "true"
+    section.style.color = "#9ca3af"
+    section.style.fontStyle = "italic"
+    section.dataset.placeholderText = contentTrim
+  }
+
   section.addEventListener("focus", () => {
     section.style.outline = "1px solid rgba(59, 130, 246, 0.5)"
     section.style.outlineOffset = "1px"
+
+    // clear placeholder text when the user focuses the editable user-code section
+    try {
+      if (section.dataset.placeholder === "true") {
+        const currentText = section.textContent
+          ? section.textContent.trim()
+          : ""
+        const placeholderText = section.dataset.placeholderText || ""
+        if (currentText === placeholderText) {
+          section.innerHTML = ""
+          delete section.dataset.placeholder
+          section.style.color = ""
+          section.style.fontStyle = ""
+        }
+      }
+    } catch (err) {
+      // ignore any DOM issues
+      console.warn("[InsightLens] placeholder focus handling error:", err)
+    }
   })
 
   section.addEventListener("blur", () => {
     section.style.outline = "none"
+
+    // restore placeholder if the field is left empty
+    try {
+      const currentText = section.textContent ? section.textContent.trim() : ""
+      if (
+        (currentText === "" || currentText === null) &&
+        (section.dataset.placeholderText || "") !== ""
+      ) {
+        section.innerHTML = escapeHtml(section.dataset.placeholderText || "")
+        section.dataset.placeholder = "true"
+        section.style.color = "#9ca3af"
+        section.style.fontStyle = "italic"
+      }
+    } catch (err) {
+      console.warn("[InsightLens] placeholder blur handling error:", err)
+    }
   })
 
   // Insert separator above the new section if there is at least one section already
@@ -179,15 +238,7 @@ function addNewSection(
     separator.className = "section-separator"
     separator.innerHTML = "---"
     separator.contentEditable = "false"
-    separator.style.cssText = `
-    text-align: center;
-    color: #6b7280;
-    margin: 4px 0;
-    font-style: italic;
-    user-select: none;
-    opacity: 0.5;
-    font-size: 11px;
-  `
+    separator.style.cssText = separatorStyle
     editor.appendChild(separator)
   }
 
@@ -199,15 +250,7 @@ function addNewSection(
     separator.className = "section-separator"
     separator.innerHTML = "---"
     separator.contentEditable = "false"
-    separator.style.cssText = `
-      text-align: center;
-      color: #6b7280;
-      margin: 4px 0;
-      font-style: italic;
-      user-select: none;
-      opacity: 0.5;
-      font-size: 11px;
-    `
+    separator.style.cssText = separatorStyle2
     editor.appendChild(separator)
   }
 
@@ -238,7 +281,6 @@ function addNewSection(
 // --- Popup UI ---
 function openPopup(selectedText: string) {
   removeExistingPopup()
-  console.log("[InsightLens] Creating popup")
 
   const popup = document.createElement("div")
   popup.id = "insightlens-popup"
@@ -272,7 +314,6 @@ function openPopup(selectedText: string) {
     // Clear all sections and add original code
     editor.innerHTML = ""
     addNewSection(editor, originalText, "user-code")
-    console.log("[InsightLens] Code reset to original")
   }
 
   // Save button to save the current code
@@ -318,7 +359,6 @@ function openPopup(selectedText: string) {
         fullText += section.textContent
       })
       navigator.clipboard.writeText(fullText)
-      console.log("[InsightLens] Code copied to clipboard")
     } catch (err) {
       // ignore clipboard errors for copy
       console.warn("[InsightLens] copy to clipboard failed:", err)
@@ -356,20 +396,7 @@ function openPopup(selectedText: string) {
 
   // Create the main editor container
   const editor = document.createElement("div")
-  editor.style.cssText =
-    popupTextarea +
-    `
-    height: 300px;
-    min-height: 300px;
-    max-height: calc(60vh - 80px);
-    resize: vertical;
-    overflow: auto;
-    white-space: pre-wrap;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 13px;
-    line-height: 1.4;
-    padding: 12px;
-  `
+  editor.style.cssText = popupTextarea + textareaStyles
   editor.setAttribute("aria-label", "Code editor with syntax coloring")
 
   // Add initial section with the selected text
@@ -425,19 +452,7 @@ function openPopup(selectedText: string) {
     // Cancel button
     const cancelBtn = document.createElement("button")
     cancelBtn.textContent = "Cancel"
-    cancelBtn.style.cssText = `
-      flex: 1;
-      padding: 8px 10px;
-      font-weight: 600;
-      color: #fff;
-      ${actionButtonBase + actionButtonGradient}
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      font-size: 13px;
-      opacity: 0.9;
-    `
+    cancelBtn.style.cssText = cancelStyle
 
     // Add hover effects
     cancelBtn.addEventListener("mouseenter", () => {
@@ -481,7 +496,6 @@ function openPopup(selectedText: string) {
         })
 
         await saveCodeSmart(name, fullCode)
-        console.log("[InsightLens] Code saved successfully")
 
         // Show success and remove the input row
         saveConfirmBtn.innerHTML = "✓ Saved!"
@@ -549,7 +563,6 @@ function openPopup(selectedText: string) {
 
     button.addEventListener("click", async (e) => {
       e.stopPropagation()
-      console.log(`[InsightLens] ${label} action triggered`)
 
       button.disabled = true
       button.style.opacity = "0.7"
@@ -575,16 +588,17 @@ function openPopup(selectedText: string) {
         // Add AI response as a new section
         addNewSection(editor, result, "ai-response", false, true)
 
-        // Automatically create a new user code section for continued work (but don't focus it)
-        addNewSection(
-          editor,
-          "// Continue your code here...",
-          "user-code",
-          false,
-          false
-        )
+        // Only for "Answer" button: auto-create a new user-code section
+        if (label === "Answer") {
+          addNewSection(
+            editor,
+            "// Continue your code here...",
+            "user-code",
+            false,
+            false
+          )
+        }
 
-        console.log(`[InsightLens] ${label} action completed`)
       } catch (err) {
         console.error(`[InsightLens] ${label} action failed:`, err)
 
@@ -645,7 +659,7 @@ function openPopup(selectedText: string) {
     const button = document.createElement("button")
     button.style.cssText =
       actionButtonBase + actionButtonGradient + " color:#fff;"
-    button.innerHTML = `<div style="display:flex;align-items:center;gap:6px">${IconAsk}<span style="font-weight:600;font-size:13px">Ask AI</span></div>`
+    button.innerHTML = askButton
 
     button.addEventListener("click", (e) => {
       e.stopPropagation()
@@ -687,13 +701,7 @@ function openPopup(selectedText: string) {
 
   function createAskInputRow() {
     const row = document.createElement("div")
-    row.style.cssText = `
-      margin-top: 10px;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    `
+    row.style.cssText = inputStyle
 
     // Input field — takes 4 parts of width
     const input = document.createElement("input")
@@ -711,13 +719,7 @@ function openPopup(selectedText: string) {
     // Send button — takes 1 part of width
     const sendBtn = document.createElement("button")
     sendBtn.textContent = "Send"
-    sendBtn.style.cssText = `
-      flex: 1;
-      padding: 8px 10px;
-      font-weight: 600;
-      color: #fff;
-      ${actionButtonBase + actionButtonGradient2}
-    `
+    sendBtn.style.cssText = sendButtonStyle
     sendBtn.addEventListener("click", async (ev) => {
       ev.stopPropagation()
       await sendAskQuestion()
@@ -759,15 +761,6 @@ function openPopup(selectedText: string) {
 
         // Replace processing message with actual response
         processingSection.innerHTML = `AI: ${escapeHtml(response.trim())}`
-
-        // Automatically create a new user code section for continued work (but don't focus it)
-        addNewSection(
-          editor,
-          "// Continue your code here...",
-          "user-code",
-          false,
-          false
-        )
 
         // Reset input field but keep focus on it for follow-up questions
         input.value = ""
@@ -832,13 +825,11 @@ function openPopup(selectedText: string) {
 // --- Helpers ---
 function removeExistingMenu() {
   const menu = document.getElementById("insightlens-menu")
-  console.log("[InsightLens] Removing menu:", menu)
   menu?.remove()
 }
 
 function removeExistingPopup() {
   const popup = document.getElementById("insightlens-popup")
-  console.log("[InsightLens] Removing popup:", popup)
   popup?.remove()
   // Reset state when popup is removed
   isPopupOpen = false
@@ -864,7 +855,6 @@ function setupContextMenu() {
 }
 
 // Listen for background requests to open the popup (from service worker)
-// background message will open an EMPTY popup (no clipboard access)
 if (
   typeof chrome !== "undefined" &&
   chrome.runtime &&
@@ -874,7 +864,6 @@ if (
     if (message && message.action === "open-insightlens") {
       try {
         if (isPopupOpen) {
-          console.log("[InsightLens] popup already open - ignoring message")
           return
         }
 
@@ -892,83 +881,17 @@ if (
   })
 }
 
-// Update global styles to include color coding and section styling
-const enhancedGlobalStyles = `
-  ${globalStylesString}
-  
-  /* Color coding for different text types */
-  .code-section {
-    padding: 6px 10px;
-    margin: 2px 0;
-    border-radius: 4px;
-    white-space: pre-wrap;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 13px;
-    line-height: 1.4;
-    min-height: 20px;
-    outline: none;
-    transition: all 0.2s ease;
-  }
-  
-  /* Subtle focus outline */
-  .code-section:focus {
-    outline: 1px solid rgba(59, 130, 246, 0.5);
-    outline-offset: 1px;
-  }
-  
-  .code-section.user-code {
-    color: #e5e7eb;
-    background: rgba(59, 130, 246, 0.08);
-    border-left: 2px solid #3b82f6;
-  }
-  
-  .code-section.ai-response {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.06); /* less opacity if you want */
-  border-left: 2px solid #10b981;
-  padding: 4px 8px; /* smaller padding */
-  margin-bottom: 2px;
-}
-
-  .code-section.error {
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.08);
-    border-left: 2px solid #ef4444;
-  }
-  
-  .code-section.user-question {
-    color: #f59e0b;
-    background: rgba(245, 158, 11, 0.08);
-    border-left: 2px solid #f59e0b;
-    font-style: italic;
-  }
-  
-  .section-separator {
-    text-align: center;
-    color: #6b7280;
-    margin: 4px 0;
-    font-style: italic;
-    user-select: none;
-    opacity: 0.5;
-    font-size: 11px;
-  }
-`
-
 // Add enhanced global styles
 const globalStyles = document.createElement("style")
 globalStyles.textContent = enhancedGlobalStyles
 document.head.appendChild(globalStyles)
 
 let isInitialized = false
-
 async function initInsightLens() {
   if (isInitialized) return
   isInitialized = true
 
-  console.log("[InsightLens] Initializing...")
-
   waitForDOMReady(() => {
-    console.log("[InsightLens] DOM ready - initializing InsightLens UI")
 
     attachSelectionListener((selection) => {
       if (!selection) {
@@ -981,23 +904,12 @@ async function initInsightLens() {
     setupContextMenu()
 
     const globalStyles = document.createElement("style")
-    globalStyles.textContent = `
-      #insightlens-menu, #insightlens-popup {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        z-index: 1000000;
-      }
-
-      #insightlens-popup {
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-      }
-    `
+    globalStyles.textContent = globalStyleText
     document.head.appendChild(globalStyles)
   })
 }
 
 function destroyInsightLens() {
-  console.log("[InsightLens] Cleaning up UI & listeners")
   removeExistingMenu()
   removeExistingPopup()
   isPopupOpen = false
@@ -1013,7 +925,6 @@ storage.get("isExtensionEnabled").then((enabled) => {
       : String(enabled).toLowerCase() === "true"
 
   if (!isEnabled) {
-    console.log("[InsightLens] Extension disabled — not starting.")
   } else {
     initInsightLens()
   }
@@ -1028,7 +939,6 @@ storage.watch({
         ? change.newValue
         : change
     const isEnabled = raw === true || raw === "true"
-    console.log("[InsightLens] Storage changed:", isEnabled)
 
     if (!isEnabled) {
       destroyInsightLens()

@@ -27,8 +27,6 @@ import { useStorage } from "@plasmohq/storage/hook"
 
 import { SavedCodesView } from "~components/features/SavedCode"
 
-// Saved codes view component
-
 // Main popup component
 export default function IndexPopup() {
   const [isExtensionEnabled, setIsExtensionEnabled] = useStorage<boolean>(
@@ -228,7 +226,7 @@ export default function IndexPopup() {
                 </span>
               </div>
               <div
-                className={`flex p-0.5 rounded-lg bg-white/5 ring-1 ring-white/10 ${responseStyle === "detailed" ? "justify-end" : "justify-start"} ${
+                className={`flex p-0.5 rounded-lg bg-white/5 ring-1 ring-white/10 ${responseStyle === "long" ? "justify-end" : "justify-start"} ${
                   !isExtensionEnabled ? "opacity-50" : ""
                 }`}>
                 <button
@@ -244,11 +242,9 @@ export default function IndexPopup() {
                   Fast
                 </button>
                 <button
-                  onClick={() =>
-                    isExtensionEnabled && setResponseStyle("detailed")
-                  }
+                  onClick={() => isExtensionEnabled && setResponseStyle("long")}
                   className={`px-2 py-0.5 rounded text-xs transition-all duration-200 flex items-center gap-1 ${
-                    responseStyle === "detailed"
+                    responseStyle === "long"
                       ? "bg-gradient-to-r from-purple-500 to-cyan-500 text-white shadow-lg shadow-purple-500/25"
                       : "text-white/70 hover:text-white"
                   } ${!isExtensionEnabled ? "cursor-not-allowed" : ""}`}>

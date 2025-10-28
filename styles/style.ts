@@ -1,3 +1,5 @@
+import { IconAsk } from "~components/helpers/icons"
+
 // ~styles/style.ts
 export const menuWrapperStyle = `
   position: absolute;
@@ -147,7 +149,7 @@ export const copyBtnStyle = `
 // ~styles/style.ts
 
 // --- Icon Styles ---
- export const floatingIconBaseStyle = `
+export const floatingIconBaseStyle = `
   display: flex;
   align-items: center;
   justify-content: center;
@@ -314,3 +316,59 @@ export const rowStyle = `
       align-items: center;
       gap: 8px;
     `
+export const separatorStyle = `
+    text-align: center;
+    color: #6b7280;
+    margin: 4px 0;
+    font-style: italic;
+    user-select: none;
+    opacity: 0.5;
+    font-size: 11px;
+  `
+export const separatorStyle2 = `
+      text-align: center;
+      color: #6b7280;
+      margin: 4px 0;
+      font-style: italic;
+      user-select: none;
+      opacity: 0.5;
+      font-size: 11px;
+    `
+export const textareaStyles = `     height: 300px;     min-height: 300px;     max-height: calc(60vh - 80px);     resize: vertical;     overflow: auto;     white-space: pre-wrap;     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;     font-size: 13px;     line-height: 1.4;     padding: 12px;   `
+
+export const cancelStyle = `
+      flex: 1;
+      padding: 8px 10px;
+      font-weight: 600;
+      color: #fff;
+      ${actionButtonBase + actionButtonGradient}
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 13px;
+      opacity: 0.9;
+    `
+
+export const askButton = `<div style="display:flex;align-items:center;gap:6px">${IconAsk}<span style="font-weight:600;font-size:13px">Ask AI</span></div>`
+
+export const inputStyle = `
+      margin-top: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    `
+
+export const sendButtonStyle = `
+      flex: 1;
+      padding: 8px 10px;
+      font-weight: 600;
+      color: #fff;
+      ${actionButtonBase + actionButtonGradient2}
+    `
+// Update global styles to include color coding and section styling
+export const enhancedGlobalStyles = `   ${globalStylesString}      /* Color coding for different text types */   .code-section {     padding: 6px 10px;     margin: 2px 0;     border-radius: 4px;     white-space: pre-wrap;     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;     font-size: 13px;     line-height: 1.4;     min-height: 20px;     outline: none;     transition: all 0.2s ease;   }      /* Subtle focus outline */   .code-section:focus {     outline: 1px solid rgba(59, 130, 246, 0.5);     outline-offset: 1px;   }      .code-section.user-code {     color: #e5e7eb;     background: rgba(59, 130, 246, 0.08);     border-left: 2px solid #3b82f6;   }      .code-section.ai-response {   color: #10b981;   background: rgba(16, 185, 129, 0.06); /* less opacity if you want */   border-left: 2px solid #10b981;   padding: 4px 8px; /* smaller padding */   margin-bottom: 2px; }    .code-section.error {     color: #ef4444;     background: rgba(239, 68, 68, 0.08);     border-left: 2px solid #ef4444;   }      .code-section.user-question {     color: #f59e0b;     background: rgba(245, 158, 11, 0.08);     border-left: 2px solid #f59e0b;     font-style: italic;   }      .section-separator {     text-align: center;     color: #6b7280;     margin: 4px 0;     font-style: italic;     user-select: none;     opacity: 0.5;     font-size: 11px;   } `
+
+export const globalStyleText = `
+      #insightlens-menu, #insightlens-popup {         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;         z-index: 1000000;       }        #insightlens-popup {         backdrop-filter: blur(10px);         -webkit-backdrop-filter: blur(10px);       }     `

@@ -1,7 +1,3 @@
-import { actionButtonBase } from "~styles/style"
-
-// --- Smart Code Detection ---
-
 export function isLikelyCode(text: string): boolean {
   if (!text || text.length < 15) return false // Increased minimum length for better context
 
