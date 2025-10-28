@@ -11,6 +11,7 @@ import {
   IconAsk,
   IconClose,
   IconCopy,
+  IconPlus,
   IconReset,
   IconReview,
   IconSave,
@@ -148,7 +149,8 @@ function addNewSection(
   editor: HTMLDivElement,
   content: string,
   type: "user-code" | "ai-response" | "user-question" | "error" = "user-code",
-  focus: boolean = true
+  focus: boolean = true,
+  scrollTo: boolean = false
 ) {
   const section = document.createElement("div")
   section.className = `code-section ${type}`
@@ -167,7 +169,7 @@ function addNewSection(
 
   editor.appendChild(section)
 
-  // Add separator between sections (except for the very first section)
+  // Add minimal separator between sections (except for the very first section)
   if (editor.children.length > 1) {
     const separator = document.createElement("div")
     separator.className = "section-separator"
@@ -176,10 +178,11 @@ function addNewSection(
     separator.style.cssText = `
       text-align: center;
       color: #6b7280;
-      margin: 8px 0;
+      margin: 4px 0;
       font-style: italic;
       user-select: none;
-      opacity: 0.7;
+      opacity: 0.5;
+      font-size: 11px;
     `
     editor.appendChild(separator)
   }
@@ -196,6 +199,13 @@ function addNewSection(
       selection.removeAllRanges()
       selection.addRange(range)
     }, 0)
+  }
+
+  // Scroll to the new section if requested
+  if (scrollTo) {
+    setTimeout(() => {
+      section.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    }, 10)
   }
 
   return section
@@ -294,11 +304,17 @@ function openPopup(selectedText: string) {
   // Add new section button
   const addSectionBtn = document.createElement("button")
   addSectionBtn.style.cssText = copyBtnStyle
-  addSectionBtn.innerHTML = "+"
+  addSectionBtn.innerHTML = IconPlus
   addSectionBtn.title = "Add new code section"
   addSectionBtn.onclick = (e) => {
     e.stopPropagation()
-    addNewSection(editor, "// Start typing your code here...", "user-code")
+    addNewSection(
+      editor,
+      "// Start typing your code here...",
+      "user-code",
+      true,
+      true
+    )
   }
 
   const closeBtn = document.createElement("button")
@@ -525,27 +541,29 @@ function openPopup(selectedText: string) {
 
         const result = await handler(currentCode)
 
-        // Add AI response as a new editable section (but don't focus on it)
-        addNewSection(editor, result, "ai-response", false)
+        // Add AI response as a new editable section (don't focus, but scroll to it)
+        addNewSection(editor, result, "ai-response", false, true)
 
-        // Automatically create a new user code section for continued work
+        // Automatically create a new user code section for continued work (but don't focus it)
         addNewSection(
           editor,
           "// Continue your code here...",
           "user-code",
-          true
+          false,
+          false
         )
 
         console.log(`[InsightLens] ${label} action completed`)
       } catch (err) {
         console.error(`[InsightLens] ${label} action failed:`, err)
 
-        // Show error in error section (don't focus on it)
+        // Show error in error section (don't focus, but scroll to it)
         addNewSection(
           editor,
           `Error in ${label}: ${err instanceof Error ? err.message : String(err)}`,
           "error",
-          false
+          false,
+          true
         )
       } finally {
         button.disabled = false
@@ -693,15 +711,16 @@ function openPopup(selectedText: string) {
           currentCode += section.textContent + "\n"
         })
 
-        // Add question as a new section (don't focus on it)
-        addNewSection(editor, `Q: ${q}`, "user-question", false)
+        // Add question as a new section (don't focus, but scroll to it)
+        addNewSection(editor, `Q: ${q}`, "user-question", false, true)
 
-        // Add processing message (don't focus on it)
+        // Add processing message (don't focus, but scroll to it)
         const processingSection = addNewSection(
           editor,
           "AI: Processing...",
           "ai-response",
-          false
+          false,
+          true
         )
 
         // Ask the AI directly using the global session
@@ -710,24 +729,26 @@ function openPopup(selectedText: string) {
         // Replace processing message with actual response
         processingSection.innerHTML = `AI: ${escapeHtml(response.trim())}`
 
-        // Automatically create a new user code section for continued work
+        // Automatically create a new user code section for continued work (but don't focus it)
         addNewSection(
           editor,
           "// Continue your code here...",
           "user-code",
-          true
+          false,
+          false
         )
 
-        // Reset input field
+        // Reset input field but keep focus on it for follow-up questions
         input.value = ""
         input.focus()
       } catch (err) {
-        // Show error (don't focus on it)
+        // Show error (don't focus, but scroll to it)
         addNewSection(
           editor,
           `Error: ${err instanceof Error ? err.message : String(err)}`,
           "error",
-          false
+          false,
+          true
         )
       } finally {
         // Restore send button
@@ -846,9 +867,9 @@ const enhancedGlobalStyles = `
   
   /* Color coding for different text types */
   .code-section {
-    padding: 8px 12px;
-    margin: 4px 0;
-    border-radius: 6px;
+    padding: 6px 10px;
+    margin: 2px 0;
+    border-radius: 4px;
     white-space: pre-wrap;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 13px;
@@ -866,36 +887,37 @@ const enhancedGlobalStyles = `
   
   .code-section.user-code {
     color: #e5e7eb;
-    background: rgba(59, 130, 246, 0.1);
-    border-left: 3px solid #3b82f6;
+    background: rgba(59, 130, 246, 0.08);
+    border-left: 2px solid #3b82f6;
   }
   
   .code-section.ai-response {
     color: #10b981;
-    background: rgba(16, 185, 129, 0.1);
-    border-left: 3px solid #10b981;
+    background: rgba(16, 185, 129, 0.08);
+    border-left: 2px solid #10b981;
   }
   
   .code-section.error {
     color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-    border-left: 3px solid #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+    border-left: 2px solid #ef4444;
   }
   
   .code-section.user-question {
     color: #f59e0b;
-    background: rgba(245, 158, 11, 0.1);
-    border-left: 3px solid #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+    border-left: 2px solid #f59e0b;
     font-style: italic;
   }
   
   .section-separator {
     text-align: center;
     color: #6b7280;
-    margin: 8px 0;
+    margin: 4px 0;
     font-style: italic;
     user-select: none;
-    opacity: 0.7;
+    opacity: 0.5;
+    font-size: 11px;
   }
 `
 
