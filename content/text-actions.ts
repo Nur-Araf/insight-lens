@@ -2,6 +2,11 @@
 import { Storage } from "@plasmohq/storage"
 
 import {
+  addAssistantMessage,
+  addUserMessage,
+  startConversation
+} from "~components/helpers/conversationManager"
+import {
   isLikelyCode,
   makeDraggableFixed,
   waitForDOMReady
@@ -60,6 +65,8 @@ import {
 } from "../handlers/modelRouter"
 // Import the save handler
 import { saveCodeSmart } from "../handlers/saveHandler"
+
+// Conversation manager (you already created this file)
 
 const storage = new Storage()
 
@@ -288,6 +295,17 @@ function openPopup(selectedText: string) {
   popup.style.visibility = "hidden"
   popup.style.cssText += popupStyle
 
+  // Create a conversation id and start the conversation in manager
+  const conversationId = `insight-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
+  // Provide a short system prompt so the assistant knows it's a code assistant
+  startConversation(
+    conversationId,
+    "You are an AI coding assistant who answers code-related questions clearly and concisely. Explain reasoning and give short examples when useful."
+  )
+
+  // Attach conversationId to the popup DOM for handlers to access if needed
+  popup.dataset.conversationId = conversationId
+
   // Store original text for reset functionality
   const originalText = selectedText
 
@@ -304,6 +322,27 @@ function openPopup(selectedText: string) {
   controls.style.gap = "8px"
   controls.style.alignItems = "center"
 
+  // Create the main editor container
+  const editor = document.createElement("div")
+  editor.style.cssText = popupTextarea + textareaStyles
+  editor.setAttribute("aria-label", "Code editor with syntax coloring")
+
+  // Add initial section with the selected text and save to conversation
+  const initialSection = addNewSection(
+    editor,
+    selectedText || "// Paste or type your code here...",
+    "user-code"
+  )
+  try {
+    const initMsg = addUserMessage(
+      conversationId,
+      initialSection.textContent || ""
+    )
+    initialSection.dataset.msgId = initMsg.id
+  } catch (err) {
+    console.warn("[InsightLens] failed to record initial user message:", err)
+  }
+
   // Reset button to restore original code
   const resetBtn = document.createElement("button")
   resetBtn.style.cssText = copyBtnStyle
@@ -313,7 +352,13 @@ function openPopup(selectedText: string) {
     e.stopPropagation()
     // Clear all sections and add original code
     editor.innerHTML = ""
-    addNewSection(editor, originalText, "user-code")
+    const s = addNewSection(editor, originalText, "user-code")
+    try {
+      const m = addUserMessage(conversationId, s.textContent || "")
+      s.dataset.msgId = m.id
+    } catch (err) {
+      console.warn("[InsightLens] reset: failed to add user message", err)
+    }
   }
 
   // Save button to save the current code
@@ -321,6 +366,11 @@ function openPopup(selectedText: string) {
   saveBtn.style.cssText = copyBtnStyle
   saveBtn.innerHTML = IconSave
   saveBtn.title = "Save code"
+
+  // Variables to track input rows
+  let askInputRow: HTMLDivElement | null = null
+  let saveInputRow: HTMLDivElement | null = null
+
   saveBtn.onclick = (e) => {
     e.stopPropagation()
 
@@ -372,13 +422,19 @@ function openPopup(selectedText: string) {
   addSectionBtn.title = "Add new code section"
   addSectionBtn.onclick = (e) => {
     e.stopPropagation()
-    addNewSection(
+    const s = addNewSection(
       editor,
       "// Start typing your code here...",
       "user-code",
       true,
       true
     )
+    try {
+      const m = addUserMessage(conversationId, s.textContent || "")
+      s.dataset.msgId = m.id
+    } catch (err) {
+      console.warn("[InsightLens] add section: failed to add user message", err)
+    }
   }
 
   const closeBtn = document.createElement("button")
@@ -393,25 +449,6 @@ function openPopup(selectedText: string) {
 
   controls.append(resetBtn, saveBtn, addSectionBtn, copyBtn, closeBtn)
   header.append(title, controls)
-
-  // Create the main editor container
-  const editor = document.createElement("div")
-  editor.style.cssText = popupTextarea + textareaStyles
-  editor.setAttribute("aria-label", "Code editor with syntax coloring")
-
-  // Add initial section with the selected text
-  addNewSection(
-    editor,
-    selectedText || "// Paste or type your code here...",
-    "user-code"
-  )
-
-  const btnRow = document.createElement("div")
-  btnRow.style.cssText = popupButtonsRow
-
-  // Variables to track input rows
-  let askInputRow: HTMLDivElement | null = null
-  let saveInputRow: HTMLDivElement | null = null
 
   // Create Save Input Row (similar to Ask Input Row)
   function createSaveInputRow(): HTMLDivElement {
@@ -534,7 +571,7 @@ function openPopup(selectedText: string) {
     svg: string,
     label: string,
     gradient: string,
-    handler: (t: string) => Promise<string>
+    handler: (t: string, conversationId?: string) => Promise<string>
   ) {
     const button = document.createElement("button")
     button.style.cssText = actionButtonBase + gradient + " color:#fff;"
@@ -576,7 +613,7 @@ function openPopup(selectedText: string) {
           currentCode = userSections[userSections.length - 1].textContent || ""
         }
 
-        let result = await handler(currentCode)
+        let result = await handler(currentCode, conversationId)
 
         // Normalize result: trim and collapse 3+ newlines to 2 newlines
         if (typeof result === "string") {
@@ -585,20 +622,40 @@ function openPopup(selectedText: string) {
           result = String(result)
         }
 
-        // Add AI response as a new section
-        addNewSection(editor, result, "ai-response", false, true)
+        // Add AI response as a new section and record it
+        const aiSection = addNewSection(
+          editor,
+          result,
+          "ai-response",
+          false,
+          true
+        )
+        try {
+          const asm = addAssistantMessage(conversationId, result)
+          aiSection.dataset.msgId = asm.id
+        } catch (err) {
+          console.warn("[InsightLens] failed to store assistant message:", err)
+        }
 
-        // Only for "Answer" button: auto-create a new user-code section
+        // Only for "Answer" button: auto-create a new user-code section (and record it)
         if (label === "Answer") {
-          addNewSection(
+          const newUser = addNewSection(
             editor,
             "// Continue your code here...",
             "user-code",
             false,
             false
           )
+          try {
+            const um = addUserMessage(conversationId, newUser.textContent || "")
+            newUser.dataset.msgId = um.id
+          } catch (err) {
+            console.warn(
+              "[InsightLens] failed to record auto-created user section:",
+              err
+            )
+          }
         }
-
       } catch (err) {
         console.error(`[InsightLens] ${label} action failed:`, err)
 
@@ -745,7 +802,19 @@ function openPopup(selectedText: string) {
         })
 
         // Add question as a new section (don't focus, but scroll to it)
-        addNewSection(editor, `Q: ${q}`, "user-question", false, true)
+        const qSection = addNewSection(
+          editor,
+          `Q: ${q}`,
+          "user-question",
+          false,
+          true
+        )
+        try {
+          const um = addUserMessage(conversationId, `Q: ${q}`)
+          qSection.dataset.msgId = um.id
+        } catch (err) {
+          console.warn("[InsightLens] failed to store user question:", err)
+        }
 
         // Add processing message (don't focus, but scroll to it)
         const processingSection = addNewSection(
@@ -756,11 +825,22 @@ function openPopup(selectedText: string) {
           true
         )
 
-        // Ask the AI directly using the global session
-        const response = await askWithSessionSmart(q, currentCode)
+        // Ask the AI directly using the global session and conversation id
+        const response = await askWithSessionSmart(
+          q,
+          currentCode,
+          conversationId
+        )
 
         // Replace processing message with actual response
         processingSection.innerHTML = `AI: ${escapeHtml(response.trim())}`
+
+        try {
+          const asm = addAssistantMessage(conversationId, response.trim())
+          processingSection.dataset.msgId = asm.id
+        } catch (err) {
+          console.warn("[InsightLens] failed to store assistant response:", err)
+        }
 
         // Reset input field but keep focus on it for follow-up questions
         input.value = ""
@@ -790,7 +870,10 @@ function openPopup(selectedText: string) {
   // Use the interactive button instead of the old one-shot askBtn
   const askInteractiveBtn = createAskInteractiveButton()
 
+  const btnRow = document.createElement("div")
+  btnRow.style.cssText = popupButtonsRow
   btnRow.append(reviewBtn, securityBtn, testBtn, answerBtn, askInteractiveBtn)
+
   popup.append(header, editor, btnRow)
   document.body.appendChild(popup)
 
@@ -892,7 +975,6 @@ async function initInsightLens() {
   isInitialized = true
 
   waitForDOMReady(() => {
-
     attachSelectionListener((selection) => {
       if (!selection) {
         removeExistingMenu()

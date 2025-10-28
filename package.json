@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "description": "Turn long articles into clear insights using Chrome Built-in AI.",
   "author": "cocshishir@gmail.com",
+  "license": "UNLICENSED",
   "icons": {
     "16": "assets/icon16.png",
     "48": "assets/icon48.png",

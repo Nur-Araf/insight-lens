@@ -1,5 +1,7 @@
-// filename: codeAssistant.ts
+// content/Localhandlers.ts
 import { Storage } from "@plasmohq/storage"
+import { getRecentHistory } from "~components/helpers/conversationManager"
+
 
 const storage = new Storage()
 
@@ -14,9 +16,15 @@ function notify(message: string, sound?: "start" | "success" | "error") {
   }
 }
 
-// --- Gemini session management ---
-let codeAssistantSession: any = null
-let sessionInitializationPromise: Promise<void> | null = null
+// --- Gemini session management (per-conversation) ---
+const DEFAULT_SYSTEM_PROMPT =
+  "You are an AI coding assistant who answers code-related questions clearly and concisely. Explain reasoning and give short examples when useful."
+
+let globalSession: any = null
+let globalInitPromise: Promise<void> | null = null
+
+const conversationSessions = new Map<string, any>()
+const conversationInitPromises = new Map<string, Promise<void>>()
 
 async function createSession(systemPrompt: string) {
   const LM = (globalThis as any).LanguageModel ?? (window as any).LanguageModel
@@ -40,28 +48,52 @@ async function createSession(systemPrompt: string) {
   return session
 }
 
+// initialize or reuse a global session (backwards-compatible)
 export async function initCodeAssistantSession() {
-  if (sessionInitializationPromise) return sessionInitializationPromise
+  if (globalInitPromise) return globalInitPromise
 
-  sessionInitializationPromise = (async () => {
+  globalInitPromise = (async () => {
     try {
-      if (codeAssistantSession) {
-        console.log("Gemini session already active.")
+      if (globalSession) {
+        console.log("Gemini session already active (global).")
         return
       }
-
-      codeAssistantSession = await createSession(
-        "You are an AI coding assistant who answers code-related questions clearly and concisely. Explain reasoning and give short examples when useful."
-      )
-      console.log("✅ Code Assistant session initialized.")
+      globalSession = await createSession(DEFAULT_SYSTEM_PROMPT)
+      console.log("✅ Global Code Assistant session initialized.")
     } catch (err: any) {
-      console.error("❌ Failed to init session:", err)
-      sessionInitializationPromise = null
+      console.error("❌ Failed to init global session:", err)
+      globalInitPromise = null
       throw err
     }
   })()
 
-  return sessionInitializationPromise
+  return globalInitPromise
+}
+
+// initialize or reuse a session for a specific conversationId
+export async function initSessionForConversation(
+  conversationId: string,
+  systemPrompt?: string
+) {
+  if (!conversationId) return initCodeAssistantSession()
+  if (conversationSessions.has(conversationId)) return
+  if (conversationInitPromises.has(conversationId))
+    return conversationInitPromises.get(conversationId)
+
+  const p = (async () => {
+    try {
+      const prompt = systemPrompt || DEFAULT_SYSTEM_PROMPT
+      const sess = await createSession(prompt)
+      conversationSessions.set(conversationId, sess)
+      console.log(`✅ Conversation session initialized: ${conversationId}`)
+    } catch (err) {
+      conversationInitPromises.delete(conversationId)
+      throw err
+    }
+  })()
+
+  conversationInitPromises.set(conversationId, p)
+  return p
 }
 
 // --- Response cache (mode aware) ---
@@ -81,9 +113,15 @@ class ResponseCache {
     this.cache.set(key, { response, timestamp: Date.now() })
   }
 
-  generateKey(promptId: string, promptText: string, mode: string): string {
+  generateKey(
+    promptId: string,
+    promptText: string,
+    mode: string,
+    conversationId?: string
+  ): string {
     const snippet = (promptText || "").substring(0, 120)
-    return `${mode}:${promptId}:${snippet}`
+    const conv = conversationId ? `conv:${conversationId}:` : ""
+    return `${mode}:${conv}${promptId}:${snippet}`
   }
 
   clear() {
@@ -91,18 +129,19 @@ class ResponseCache {
   }
 }
 
-// --- RequestQueue (serializes model calls) ---
-class RequestQueue {
+// --- RequestQueue (per-conversation queues) ---
+class SingleRequestQueue {
   private queue: Array<{
     prompt: string
+    conversationId?: string
     resolve: (value: string) => void
     reject: (reason?: any) => void
   }> = []
   private processing = false
 
-  add(prompt: string): Promise<string> {
+  add(prompt: string, conversationId?: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      this.queue.push({ prompt, resolve, reject })
+      this.queue.push({ prompt, conversationId, resolve, reject })
       this.processNext()
     })
   }
@@ -111,19 +150,40 @@ class RequestQueue {
     if (this.processing || this.queue.length === 0) return
     this.processing = true
 
-    const { prompt, resolve, reject } = this.queue.shift()!
+    const { prompt, conversationId, resolve, reject } = this.queue.shift()!
 
     try {
-      if (!codeAssistantSession) {
-        await initCodeAssistantSession()
+      // Determine which session to use: per-conversation if available else global
+      let sessionToUse: any = null
+
+      if (conversationId) {
+        if (!conversationSessions.has(conversationId)) {
+          // try to init the conversation session; if it fails, fallback to global
+          try {
+            await initSessionForConversation(conversationId)
+          } catch (e) {
+            console.warn(
+              "[InsightLens] failed to init conversation session, falling back to global:",
+              e
+            )
+          }
+        }
+        sessionToUse = conversationSessions.get(conversationId)
       }
-      if (codeAssistantSession?.prompt) {
-        const response = await codeAssistantSession.prompt(prompt)
+
+      if (!sessionToUse) {
+        if (!globalSession) {
+          await initCodeAssistantSession()
+        }
+        sessionToUse = globalSession
+      }
+
+      if (sessionToUse?.prompt) {
+        const response = await sessionToUse.prompt(prompt)
         resolve(response)
       } else {
-        const transient = await createSession(
-          "Transient assistant for single request."
-        )
+        // fallback: create a transient session for this single request
+        const transient = await createSession(DEFAULT_SYSTEM_PROMPT)
         const response = await transient.prompt(prompt)
         resolve(response)
       }
@@ -136,9 +196,22 @@ class RequestQueue {
   }
 }
 
+// Manage queues keyed by conversationId (or 'global' key if no conversationId)
+class QueueManager {
+  private queues = new Map<string, SingleRequestQueue>()
+  getQueue(conversationId?: string) {
+    const key = conversationId || "__global__"
+    if (!this.queues.has(key)) {
+      this.queues.set(key, new SingleRequestQueue())
+    }
+    return this.queues.get(key)!
+  }
+}
+
+export const queueManager = new QueueManager()
+
 // --- instantiate and export ---
 export const responseCache = new ResponseCache()
-export const requestQueue = new RequestQueue()
 
 // --- responseStyle helpers ---
 // NOTE: do NOT cache responseStyle in-memory permanently. Always read current storage state.
@@ -270,28 +343,67 @@ ${code}
   }
 }
 
-// --- build prompt by action & mode ---
-async function buildPrompt(action: string, payload: string) {
+// --- build prompt by action & mode (now accepts conversationId to include history) ---
+async function buildPrompt(
+  action: string,
+  payload: string,
+  conversationId?: string
+) {
   const mode = await getResponseStyle()
   const tpl = PROMPT_TEMPLATES[action]
-  if (!tpl) {
-    return mode === "long"
+  const base = tpl
+    ? mode === "long"
+      ? tpl.long(payload)
+      : tpl.short(payload)
+    : mode === "long"
       ? `Provide a detailed answer (Markdown, examples). Input:\n\`\`\`\n${payload}\n\`\`\``
       : `Provide a brief answer. Input:\n\`\`\`\n${payload}\n\`\`\``
+
+  // If conversationId present, fetch recent history and prepend it in a clear block
+  if (conversationId) {
+    try {
+      const hist = getRecentHistory(conversationId, 12)
+      if (hist && hist.length) {
+        const historyText = hist
+          .map((m: any) => {
+            const role = (m.role || "user").toUpperCase()
+            const content =
+              typeof m.content === "string"
+                ? m.content
+                : String(m.content || "")
+            return `${role}:\n${content}`
+          })
+          .join("\n\n")
+        return `Conversation history (most recent last):\n${historyText}\n\nInstruction:\n${base}`
+      }
+    } catch (err) {
+      console.warn(
+        "[InsightLens] buildPrompt: failed to include conversation history:",
+        err
+      )
+      // fallback to base
+    }
   }
-  return mode === "long" ? tpl.long(payload) : tpl.short(payload)
+
+  return base
 }
 
-// --- Public API functions (mode-aware, cache-aware) ---
+// --- Public API functions (now accept optional conversationId) ---
 export async function askWithSession(
   question: string,
-  codeContext?: string
+  codeContext?: string,
+  conversationId?: string
 ): Promise<string> {
   const mode = await getResponseStyle()
   const promptText = codeContext
     ? `Context:\n\`\`\`\n${codeContext}\n\`\`\`\n\nQuestion: ${question}`
     : question
-  const cacheKey = responseCache.generateKey("ask", promptText, mode)
+  const cacheKey = responseCache.generateKey(
+    "ask",
+    promptText,
+    mode,
+    conversationId
+  )
   const cached = responseCache.get(cacheKey)
   if (cached) {
     notify("Answer received from InsightLens (cache).", "success")
@@ -300,8 +412,10 @@ export async function askWithSession(
 
   notify("Asking InsightLens...", "start")
   try {
-    const prompt = await buildPrompt("explain", promptText)
-    const res = await requestQueue.add(prompt)
+    const prompt = await buildPrompt("explain", promptText, conversationId)
+    const res = await queueManager
+      .getQueue(conversationId)
+      .add(prompt, conversationId)
     responseCache.set(cacheKey, res)
     notify("Answer received from InsightLens.", "success")
     return res
@@ -311,9 +425,17 @@ export async function askWithSession(
   }
 }
 
-export async function reviewCode(text: string): Promise<string> {
+export async function reviewCode(
+  text: string,
+  conversationId?: string
+): Promise<string> {
   const mode = await getResponseStyle()
-  const cacheKey = responseCache.generateKey("review", text, mode)
+  const cacheKey = responseCache.generateKey(
+    "review",
+    text,
+    mode,
+    conversationId
+  )
   const cached = responseCache.get(cacheKey)
   if (cached) {
     notify("Code review completed!", "success")
@@ -323,8 +445,10 @@ export async function reviewCode(text: string): Promise<string> {
   notify("InsightLens is reviewing your code...", "start")
   try {
     const optimizedText = text.substring(0, 3000)
-    const prompt = await buildPrompt("review", optimizedText)
-    const res = await requestQueue.add(prompt)
+    const prompt = await buildPrompt("review", optimizedText, conversationId)
+    const res = await queueManager
+      .getQueue(conversationId)
+      .add(prompt, conversationId)
     responseCache.set(cacheKey, res)
     notify("Code review completed!", "success")
     return res
@@ -334,9 +458,17 @@ export async function reviewCode(text: string): Promise<string> {
   }
 }
 
-export async function answerAi(text: string): Promise<string> {
+export async function answerAi(
+  text: string,
+  conversationId?: string
+): Promise<string> {
   const mode = await getResponseStyle()
-  const cacheKey = responseCache.generateKey("answer", text, mode)
+  const cacheKey = responseCache.generateKey(
+    "answer",
+    text,
+    mode,
+    conversationId
+  )
   const cached = responseCache.get(cacheKey)
   if (cached) {
     notify("Answer ready!", "success")
@@ -345,8 +477,14 @@ export async function answerAi(text: string): Promise<string> {
 
   notify("InsightLens is analyzing request...", "start")
   try {
-    const prompt = await buildPrompt("answer", text.substring(0, 3000))
-    const res = await requestQueue.add(prompt)
+    const prompt = await buildPrompt(
+      "answer",
+      text.substring(0, 3000),
+      conversationId
+    )
+    const res = await queueManager
+      .getQueue(conversationId)
+      .add(prompt, conversationId)
     responseCache.set(cacheKey, res)
     notify("Answer ready!", "success")
     return res
@@ -356,12 +494,17 @@ export async function answerAi(text: string): Promise<string> {
   }
 }
 
-export async function ask(text: string, question?: string): Promise<string> {
+export async function ask(
+  text: string,
+  question?: string,
+  conversationId?: string
+): Promise<string> {
   const mode = await getResponseStyle()
   const cacheKey = responseCache.generateKey(
     "explain",
     text + (question || ""),
-    mode
+    mode,
+    conversationId
   )
   const cached = responseCache.get(cacheKey)
   if (cached) {
@@ -371,13 +514,22 @@ export async function ask(text: string, question?: string): Promise<string> {
 
   notify("InsightLens is analyzing your code...", "start")
   try {
-    if (!codeAssistantSession) await initCodeAssistantSession()
+    // Prefer to reuse a per-conversation session if available
+    if (conversationId) {
+      await initSessionForConversation(conversationId).catch(() => {}) // ignore init errors (will fallback)
+    } else {
+      if (!globalSession) await initCodeAssistantSession()
+    }
+
     const q = question || "Explain what this code does and its purpose."
     const prompt = await buildPrompt(
       "explain",
-      `${q}\n\nCode:\n\`\`\`\n${text}\n\`\`\``
+      `${q}\n\nCode:\n\`\`\`\n${text}\n\`\`\``,
+      conversationId
     )
-    const res = await requestQueue.add(prompt)
+    const res = await queueManager
+      .getQueue(conversationId)
+      .add(prompt, conversationId)
     responseCache.set(cacheKey, res)
     notify("Explanation ready!", "success")
     return res
@@ -387,9 +539,17 @@ export async function ask(text: string, question?: string): Promise<string> {
   }
 }
 
-export async function generateTests(text: string): Promise<string> {
+export async function generateTests(
+  text: string,
+  conversationId?: string
+): Promise<string> {
   const mode = await getResponseStyle()
-  const cacheKey = responseCache.generateKey("tests", text, mode)
+  const cacheKey = responseCache.generateKey(
+    "tests",
+    text,
+    mode,
+    conversationId
+  )
   const cached = responseCache.get(cacheKey)
   if (cached) {
     notify("Test generation completed!", "success")
@@ -398,12 +558,20 @@ export async function generateTests(text: string): Promise<string> {
 
   notify("Generating unit tests...", "start")
   try {
-    if (!codeAssistantSession) await initCodeAssistantSession()
+    if (conversationId) {
+      await initSessionForConversation(conversationId).catch(() => {})
+    } else {
+      if (!globalSession) await initCodeAssistantSession()
+    }
+
     const prompt = await buildPrompt(
       "tests",
-      `Generate relevant unit tests for this code:\n\n\`\`\`\n${text}\n\`\`\``
+      `Generate relevant unit tests for this code:\n\n\`\`\`\n${text}\n\`\`\``,
+      conversationId
     )
-    const res = await requestQueue.add(prompt)
+    const res = await queueManager
+      .getQueue(conversationId)
+      .add(prompt, conversationId)
     responseCache.set(cacheKey, res)
     notify("Test generation completed!", "success")
     return res
@@ -413,9 +581,17 @@ export async function generateTests(text: string): Promise<string> {
   }
 }
 
-export async function checkSecurity(text: string): Promise<string> {
+export async function checkSecurity(
+  text: string,
+  conversationId?: string
+): Promise<string> {
   const mode = await getResponseStyle()
-  const cacheKey = responseCache.generateKey("security", text, mode)
+  const cacheKey = responseCache.generateKey(
+    "security",
+    text,
+    mode,
+    conversationId
+  )
   const cached = responseCache.get(cacheKey)
   if (cached) {
     notify("Security review completed!", "success")
@@ -424,12 +600,20 @@ export async function checkSecurity(text: string): Promise<string> {
 
   notify("Checking code for vulnerabilities...", "start")
   try {
-    if (!codeAssistantSession) await initCodeAssistantSession()
+    if (conversationId) {
+      await initSessionForConversation(conversationId).catch(() => {})
+    } else {
+      if (!globalSession) await initCodeAssistantSession()
+    }
+
     const prompt = await buildPrompt(
       "security",
-      `Perform a security review of this code:\n\n\`\`\`\n${text}\n\`\`\``
+      `Perform a security review of this code:\n\n\`\`\`\n${text}\n\`\`\``,
+      conversationId
     )
-    const res = await requestQueue.add(prompt)
+    const res = await queueManager
+      .getQueue(conversationId)
+      .add(prompt, conversationId)
     responseCache.set(cacheKey, res)
     notify("Security review completed!", "success")
     return res
