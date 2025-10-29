@@ -16,6 +16,7 @@ import {
   IconAsk,
   IconClose,
   IconCopy,
+  IconExplain,
   IconPlus,
   IconReset,
   IconReview,
@@ -34,6 +35,7 @@ import {
   askInputStyle,
   cancelStyle,
   closeBtnStyle,
+  codeSectionFix,
   copyBtnStyle,
   enhancedGlobalStyles,
   floatingIconBaseStyle,
@@ -60,7 +62,7 @@ import {
   answerAiSmart,
   askWithSessionSmart,
   checkSecuritySmart,
-  generateTestsSmart,
+  generateExplianSmart,
   reviewCodeSmart
 } from "../handlers/modelRouter"
 // Import the save handler
@@ -157,6 +159,14 @@ function escapeHtml(unsafe: string): string {
     .replace(/'/g, "&#039;")
 }
 
+function ensureCaretVisible(section: HTMLElement) {
+  // If the section has no visible text, inject a zero-width space
+  const text = section.textContent?.trim() || ""
+  if (text.length === 0) {
+    section.innerHTML = "\u200B" // zero-width space keeps caret alive
+  }
+}
+
 // Helper function to add a new section with proper styling
 function addNewSection(
   editor: HTMLDivElement,
@@ -169,6 +179,12 @@ function addNewSection(
   section.className = `code-section ${type}`
   section.innerHTML = escapeHtml(content)
   section.contentEditable = type === "user-code" ? "true" : "false"
+
+  // if (type === "user-code") {
+  //   section.style.minHeight = "1.2em"
+  //   section.style.paddingBottom = "0.4em"
+  //   section.style.display = "block"
+  // }
 
   // Add subtle focus styling + placeholder behavior
   const placeholderVariants = [
@@ -201,10 +217,11 @@ function addNewSection(
           : ""
         const placeholderText = section.dataset.placeholderText || ""
         if (currentText === placeholderText) {
-          section.innerHTML = ""
+          // clear placeholder but keep caret visible
           delete section.dataset.placeholder
           section.style.color = ""
           section.style.fontStyle = ""
+          section.innerHTML = "\u200B" // prevents collapse
         }
       }
     } catch (err) {
@@ -219,14 +236,16 @@ function addNewSection(
     // restore placeholder if the field is left empty
     try {
       const currentText = section.textContent ? section.textContent.trim() : ""
-      if (
-        (currentText === "" || currentText === null) &&
-        (section.dataset.placeholderText || "") !== ""
-      ) {
-        section.innerHTML = escapeHtml(section.dataset.placeholderText || "")
-        section.dataset.placeholder = "true"
-        section.style.color = "#9ca3af"
-        section.style.fontStyle = "italic"
+      if (currentText === "" || currentText === "\u200B") {
+        const placeholderText = section.dataset.placeholderText || ""
+        if (placeholderText) {
+          section.innerHTML = escapeHtml(placeholderText)
+          section.dataset.placeholder = "true"
+          section.style.color = "#9ca3af"
+          section.style.fontStyle = "italic"
+        } else {
+          ensureCaretVisible(section)
+        }
       }
     } catch (err) {
       console.warn("[InsightLens] placeholder blur handling error:", err)
@@ -324,7 +343,7 @@ function openPopup(selectedText: string) {
 
   // Create the main editor container
   const editor = document.createElement("div")
-  editor.style.cssText = popupTextarea + textareaStyles
+  editor.style.cssText = popupTextarea + textareaStyles + codeSectionFix
   editor.setAttribute("aria-label", "Code editor with syntax coloring")
 
   // Add initial section with the selected text and save to conversation
@@ -704,11 +723,11 @@ function openPopup(selectedText: string) {
     actionButtonGradient,
     answerAiSmart
   )
-  const testBtn = createActionButton(
-    IconTest,
-    "Tests",
+  const explainBtn = createActionButton(
+    IconExplain,
+    "Explain",
     actionButtonGradient2,
-    generateTestsSmart
+    generateExplianSmart
   )
 
   // Create the Ask toggle button (similar styles to other buttons)
@@ -872,7 +891,13 @@ function openPopup(selectedText: string) {
 
   const btnRow = document.createElement("div")
   btnRow.style.cssText = popupButtonsRow
-  btnRow.append(reviewBtn, securityBtn, testBtn, answerBtn, askInteractiveBtn)
+  btnRow.append(
+    explainBtn,
+    reviewBtn,
+    securityBtn,
+    answerBtn,
+    askInteractiveBtn
+  )
 
   popup.append(header, editor, btnRow)
   document.body.appendChild(popup)

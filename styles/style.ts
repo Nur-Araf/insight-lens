@@ -372,3 +372,34 @@ export const enhancedGlobalStyles = `   ${globalStylesString}      /* Color codi
 
 export const globalStyleText = `
       #insightlens-menu, #insightlens-popup {         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;         z-index: 1000000;       }        #insightlens-popup {         backdrop-filter: blur(10px);         -webkit-backdrop-filter: blur(10px);       }     `
+
+export const codeSectionFix = `
+  .code-section.user-code {
+  display: block;
+  min-height: 1.4em;
+  line-height: 1.4;
+  padding-bottom: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  white-space: pre-wrap;
+}
+
+  .code-section.user-code:empty::before {
+    content: "\\200b"; /* zero-width space keeps height */
+  }
+
+  .code-section.user-code[contenteditable="true"]:focus {
+    outline: 1px solid rgba(59,130,246,0.5);
+    outline-offset: 1px;
+  }
+
+  .code-section.ai-response {
+    color: #93c5fd;
+    margin-top: 4px;
+    margin-bottom: 6px;
+  }
+
+  .code-section.error {
+    color: #f87171;
+    font-style: italic;
+  }
+`

@@ -15,13 +15,13 @@ function notify(message: string, sound?: "start" | "success" | "error") {
 
 /**
  * callGemini
- * - type: one of "ask" | "review" | "answer" | "security" | "test"
+ * - type: one of "ask" | "review" | "answer" | "security" | "explain"
  * - text: the main payload (question or code)
  * - context: optional additional context (e.g., full code block or user-supplied context)
  * - conversationId: optional conversation id to include recent history
  */
 export async function callGemini(
-  type: "ask" | "review" | "answer" | "security" | "test",
+  type: "ask" | "review" | "answer" | "security" | "explain",
   text: string,
   context?: string,
   conversationId?: string
@@ -33,12 +33,10 @@ export async function callGemini(
   let historyText = ""
   try {
     if (conversationId) {
-      const hist = getRecentHistory(conversationId, 12) // last 12 messages (adjust as needed)
+      const hist = getRecentHistory(conversationId, 12) // last 12 messages
       if (hist && hist.length) {
-        // Format history in a compact readable way
         historyText = hist
           .map((m: any) => {
-            // guard roles/fields
             const role = m.role ? String(m.role).toUpperCase() : "MSG"
             const content =
               typeof m.content === "string"
@@ -54,22 +52,19 @@ export async function callGemini(
     historyText = ""
   }
 
-  // Compose final prompt text carefully: include instruction, history, context, and the primary text.
-  // We keep named sections so a downstream model handler can parse them better.
+  // Compose final prompt
   let composed = `${basePrompt}\n\n`
   if (historyText) {
     composed += `Conversation history (most recent last):\n${historyText}\n\n`
   }
-
   if (context) {
     composed += `Context:\n${context}\n\n`
   }
 
-  // Distinguish between code-heavy actions and generic text/questions
-  if (type === "review" || type === "security" || type === "test") {
+  // Distinguish between code-heavy and general prompts
+  if (type === "review" || type === "security" || type === "explain") {
     composed += `Code to analyze:\n\`\`\`\n${text}\n\`\`\`\n`
   } else {
-    // ask / answer generic
     composed += `Input:\n\`\`\`\n${text}\n\`\`\`\n`
   }
 
@@ -105,25 +100,29 @@ function getPrompt(type: string): string {
       return "Provide a clear, helpful, and accurate answer to the following question or code problem. If it's code, explain what it does and offer corrections or improvements if needed:"
     case "security":
       return "Analyze this code for potential security vulnerabilities and suggest improvements:"
-    case "test":
-      return "Generate relevant unit tests for this code:"
+    case "explain":
+      return "Explain this code in detail — include purpose, logic flow, and what each part does in context:"
     case "ask":
     default:
       return "Answer this general programming-related question:"
   }
 }
 
-// Convenience wrappers (each now accepts conversationId optional)
+// --- Convenience wrappers ---
 export const askWithSession = (
   q: string,
   ctx?: string,
   conversationId?: string
 ) => callGemini("ask", q, ctx, conversationId)
+
 export const reviewCode = (code: string, conversationId?: string) =>
   callGemini("review", code, undefined, conversationId)
+
 export const answerAi = (code: string, conversationId?: string) =>
   callGemini("answer", code, undefined, conversationId)
+
 export const checkSecurity = (code: string, conversationId?: string) =>
   callGemini("security", code, undefined, conversationId)
-export const generateTests = (code: string, conversationId?: string) =>
-  callGemini("test", code, undefined, conversationId)
+
+export const generateExplain = (code: string, conversationId?: string) =>
+  callGemini("explain", code, undefined, conversationId)

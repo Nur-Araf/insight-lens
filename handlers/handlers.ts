@@ -1,7 +1,7 @@
 // content/Localhandlers.ts
 import { Storage } from "@plasmohq/storage"
-import { getRecentHistory } from "~components/helpers/conversationManager"
 
+import { getRecentHistory } from "~components/helpers/conversationManager"
 
 const storage = new Storage()
 
@@ -244,7 +244,7 @@ export async function setResponseStyle(
   return mode
 }
 
-// --- Prompt templates for both modes (same as before) ---
+// --- Prompt templates for both modes ---
 const PROMPT_TEMPLATES: Record<
   string,
   { short: (payload: string) => string; long: (payload: string) => string }
@@ -253,7 +253,7 @@ const PROMPT_TEMPLATES: Record<
     short: (code) =>
       `Brief code review — top 3 critical issues only. Keep it concise (<=3 bullets).\n\nCode:\n\`\`\`\n${code}\n\`\`\``,
     long: (code) =>
-      `Detailed code review. Use Markdown headings: 
+      `Detailed code review. Use Markdown headings:
 ## Summary — one-line
 ## Findings — numbered list with severity (P0/P1/P2)
 ## Fixes — include code patches or suggested changes (fenced code blocks)
@@ -264,24 +264,23 @@ Code:
 \`\`\`
 ${code}
 \`\`\`
-Please be thorough (300-800 words), include at least one code example and a minimal patch.`
+Please be thorough (300–800 words), include at least one code example and a minimal patch.`
   },
 
   answer: {
     short: (text) =>
-      `Give a short and clear answer (2–4 sentences max). 
+      `Give a short and clear answer (2–4 sentences max).
 Focus on the key point and avoid extra details.
 
 Question or text:
 \`\`\`
 ${text}
 \`\`\``,
-
     long: (text) =>
-      `Provide a detailed and helpful answer. 
-Use Markdown headings where relevant. 
-Include examples, explanations, and reasoning. 
-If the text is a question, answer it thoroughly; if it's a statement, expand on it with context and insights. 
+      `Provide a detailed and helpful answer.
+Use Markdown headings where relevant.
+Include examples, explanations, and reasoning.
+If the text is a question, answer it thoroughly; if it's a statement, expand on it with context and insights.
 Keep it structured and easy to read.
 
 Question or text:
@@ -292,36 +291,38 @@ ${text}
 
   explain: {
     short: (code) =>
-      `Explain concisely what this does in 2-3 short sentences.\n\nCode:\n\`\`\`\n${code}\n\`\`\``,
-    long: (code) =>
-      `Explain thoroughly. Use headings:
-## TL;DR (one line)
-## Line-by-line explanation
-## Purpose & contexts
-## Edge cases & failure modes
-## Example usage (fenced code)
-Keep it structured and include at least one example and recommended improvements.
+      `Explain clearly what this code does in simple terms (2–3 sentences max).
+Focus on functionality and intent, not restating syntax.
 
 Code:
 \`\`\`
 ${code}
-\`\`\``
-  },
+\`\`\``,
 
-  tests: {
-    short: (code) =>
-      `Generate 3 essential unit tests (titles + short description). Code:\n\`\`\`\n${code}\n\`\`\``,
     long: (code) =>
-      `Generate comprehensive unit tests. Provide:
-1) a table of test cases (name, input, expected)
-2) ready-to-run test code (Jest or preferred)
-3) mocks/stubs and edge-case tests
-Place test code in fenced blocks.
+      `Provide a detailed and developer-friendly explanation of the following code.
+Use Markdown headings and clear structure.
+
+## TL;DR
+Give a single-sentence summary of the code’s purpose.
+
+## Step-by-step Explanation
+Explain what happens in each key section or line group (not just paraphrasing — describe *why* it's written this way).
+
+## Purpose & Context
+Describe what kind of problem this code solves, where it would typically be used, and what its design choices imply.
+
+## Potential Issues or Improvements
+List any possible bugs, inefficiencies, or cleaner approaches.
+
+## Example Usage
+Show a short, runnable example or how another developer might use or extend this code.
 
 Code:
 \`\`\`
 ${code}
-\`\`\``
+\`\`\`
+Keep the tone educational, clear, and concise — like a senior engineer mentoring a junior developer.`
   },
 
   security: {
@@ -539,45 +540,49 @@ export async function ask(
   }
 }
 
-export async function generateTests(
+export async function generateExplain(
   text: string,
   conversationId?: string
 ): Promise<string> {
   const mode = await getResponseStyle()
   const cacheKey = responseCache.generateKey(
-    "tests",
+    "explain",
     text,
     mode,
     conversationId
   )
   const cached = responseCache.get(cacheKey)
   if (cached) {
-    notify("Test generation completed!", "success")
+    notify("Code explanation ready!", "success")
     return cached
   }
 
-  notify("Generating unit tests...", "start")
+  notify("InsightLens is explaining your code...", "start")
   try {
+    // Ensure correct session is initialized
     if (conversationId) {
       await initSessionForConversation(conversationId).catch(() => {})
     } else {
       if (!globalSession) await initCodeAssistantSession()
     }
 
+    // Build a detailed explanation prompt
     const prompt = await buildPrompt(
-      "tests",
-      `Generate relevant unit tests for this code:\n\n\`\`\`\n${text}\n\`\`\``,
+      "explain",
+      `Explain this code in detail:\n\n\`\`\`\n${text}\n\`\`\``,
       conversationId
     )
+
     const res = await queueManager
       .getQueue(conversationId)
       .add(prompt, conversationId)
+
     responseCache.set(cacheKey, res)
-    notify("Test generation completed!", "success")
+    notify("Code explanation ready!", "success")
     return res
   } catch (err: any) {
-    notify("Test generation failed.", "error")
-    return `generateTests error: ${err.message || err}`
+    notify("Code explanation failed.", "error")
+    return `generateExplain error: ${err.message || err}`
   }
 }
 

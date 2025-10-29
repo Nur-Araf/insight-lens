@@ -4,16 +4,16 @@ import { Storage } from "@plasmohq/storage"
 import {
   answerAi as apiAnswer,
   askWithSession as apiAsk,
+  generateExplain as apiExplain,
   reviewCode as apiReview,
-  checkSecurity as apiSecurity,
-  generateTests as apiTests
+  checkSecurity as apiSecurity
 } from "./geminiHandlers"
 import {
   answerAi as localAnswer,
   askWithSession as localAsk,
+  generateExplain as localExplain,
   reviewCode as localReview,
-  checkSecurity as localSecurity,
-  generateTests as localTests
+  checkSecurity as localSecurity
 } from "./handlers"
 
 const storage = new Storage()
@@ -70,10 +70,12 @@ export async function checkSecuritySmart(
     : apiSecurity(text, conversationId)
 }
 
-export async function generateTestsSmart(
+export async function generateExplianSmart(
   text: string,
   conversationId?: string
 ): Promise<string> {
   const mode = await getApiMode()
-  return mode === "local" ? localTests(text) : apiTests(text, conversationId)
+  return mode === "local"
+    ? localExplain(text)
+    : apiExplain(text, conversationId)
 }
