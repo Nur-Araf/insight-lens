@@ -1,4 +1,58 @@
-This is a [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with [`plasmo init`](https://www.npmjs.com/package/plasmo).
+# 🧠 InsightLens Code Reviewer
+
+_Inline AI code help for developers and learners — built with Plasmo + Chrome Built-in AI_
+
+---
+
+## 🚀 Overview
+
+**InsightLens Code Reviewer** brings AI-powered explanations, reviews, and refactors directly inside your browser — no copy-pasting code into chat tools or IDEs.  
+Just open any website with code snippets (like GitHub, Stack Overflow, or documentation), and get instant insight **inline**.
+
+This project is designed for the **Google Chrome Built-in AI Challenge 2025**.
+
+---
+
+## ✨ Features
+
+- 🧩 **Inline Code Detection** — Automatically finds `<pre><code>` blocks on web pages
+- ⚙️ **Quick Review Panel** — Opens with `Ctrl + Shift + E` or by selecting a code block
+- 💬 **Explain / Review / Security / Ask AI / Rewrite** options
+- 🧠 **Explain Mode** — Short or detailed explanations for faster learning
+- 🔐 **Security Mode** — Detects vulnerabilities and suggests fixes
+- 🔁 **Rewrite Mode** — Generates optimized and cleaner code versions with inline diffs
+- 💾 **Local Save & History** — Stores snippets privately in IndexedDB
+- 🧰 **Configurable Settings** — Toggle notifications, switch between short/detailed responses
+- 🔒 **Privacy First** — Runs locally using Chrome’s built-in **Gemini Nano**, cloud use is optional
+
+---
+
+## 🧑‍💻 For Beginners
+
+InsightLens helps beginners **learn code faster** by:
+
+- Explaining real-world code directly on GitHub or Stack Overflow
+- Highlighting security flaws with human-readable guidance
+- Giving quick, practical examples of how to test and improve code
+
+No extra tabs, no distractions — learn where you read.
+
+---
+
+## 🧩 Built With
+
+- [Plasmo Framework](https://docs.plasmo.com/)
+- React + TypeScript
+- Chrome Built-in **Gemini Nano (Prompt API + Rewriter)**
+- Local storage via IndexedDB
+
+---
+
+## Env
+
+**PLASMO_PUBLIC_GEMINI_KEY=[ key_ ]**
+
+---
 
 ## Getting Started
 
@@ -28,6 +82,15 @@ npm run build
 
 This should create a production bundle for your extension, ready to be zipped and published to the stores.
 
-## Submit to the webstores
+---
 
-The easiest way to deploy your Plasmo extension is to use the built-in [bpp](https://bpp.browser.market) GitHub action. Prior to using this action however, make sure to build your extension and upload the first version to the store to establish the basic credentials. Then, simply follow [this setup instruction](https://docs.plasmo.com/framework/workflows/submit) and you should be on your way for automated submission!
+## Demo Video
+
+[Youtube](https://youtu.be/dHn66NkZ0u4?si=3LlMmWnPausEv8GZ)
+
+---
+
+## Credits
+
+Created by **Nur Araf Shishir** 🇧🇩
+for **Google Chrome Built-in AI Challenge 2025**
