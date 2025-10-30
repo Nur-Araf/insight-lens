@@ -5,7 +5,10 @@ import { initCodeAssistantSession } from "~handlers/handlers"
 
 const storage = new Storage()
 
-const GEMINI_API_KEY = process.env.PLASMO_PUBLIC_GEMINI_KEY
+async function getGeminiApiKey() {
+  const userKey = await storage.get("userGeminiKey")
+  return userKey || process.env.PLASMO_PUBLIC_GEMINI_KEY
+}
 
 // 🔹 Run once when the extension is installed
 async function tryInitSessionEarly() {
@@ -81,51 +84,69 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     console.error("❌ Error in onMessage handler:", err)
   }
 })
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "fetchGeminiResponse") {
-    const { type, text, context, prompt } = request
+    ;(async () => {
+      try {
+        const { type, text, context, prompt } = request
 
-    console.log(`🧠 Gemini request received (${type})`)
+        // 🔹 Get Gemini API key dynamically (from storage or env)
+        const userKey = await storage.get("userGeminiKey")
+        const GEMINI_API_KEY = userKey || process.env.PLASMO_PUBLIC_GEMINI_KEY
 
-    // Prepare body for Gemini request
-    const body = {
-      contents: [
-        {
-          role: "user",
-          parts: [
+        if (!GEMINI_API_KEY) {
+          sendResponse({
+            success: false,
+            error:
+              "No Gemini API key found. Please add your key in settings first."
+          })
+          return
+        }
+
+        // 🔹 Prepare request body
+        const body = {
+          contents: [
             {
-              text: `${prompt}\n\n${text}${context ? `\n\nContext:\n${context}` : ""}`
+              role: "user",
+              parts: [
+                {
+                  text: `${prompt}\n\n${text}${
+                    context ? `\n\nContext:\n${context}` : ""
+                  }`
+                }
+              ]
             }
           ]
         }
-      ]
-    }
 
-    fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      }
-    )
-      .then(async (response) => {
+        // 🔹 Send Gemini request
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+          }
+        )
+
         if (!response.ok) {
           const err = await response.text()
           throw new Error(`Gemini request failed: ${err}`)
         }
+
         const data = await response.json()
         const reply =
-          data?.candidates?.[0]?.content?.parts?.[0]?.text || "No response."
+          data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+          "No response received from Gemini."
+
         sendResponse({ success: true, data: reply })
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("❌ Gemini API error:", error)
         sendResponse({ success: false, error: error.message })
-      })
+      }
+    })()
 
-    return true // keep channel open for async response
+    return true // keep the message channel open for async
   }
 })
 

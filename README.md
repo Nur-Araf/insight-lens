@@ -15,9 +15,9 @@ This project is designed for the **Google Chrome Built-in AI Challenge 2025**.
 
 ## ✨ Features
 
-- 🧩 **Inline Code Detection** — Automatically finds `<pre><code>` blocks on web pages
+- 🧩 **Inline Code Detection** — On Select code the Quick Review UI will appear or use Ctrl + Shift + E 
 - ⚙️ **Quick Review Panel** — Opens with `Ctrl + Shift + E` or by selecting a code block
-- 💬 **Explain / Review / Security / Ask AI / Rewrite** options
+- 💬 **Explain / Review / Security / Ask AI ** options
 - 🧠 **Explain Mode** — Short or detailed explanations for faster learning
 - 🔐 **Security Mode** — Detects vulnerabilities and suggests fixes
 - 🔁 **Rewrite Mode** — Generates optimized and cleaner code versions with inline diffs

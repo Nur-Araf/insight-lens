@@ -29,6 +29,13 @@ import { SavedCodesView } from "~components/features/SavedCode"
 
 // Main popup component
 export default function IndexPopup() {
+  const [userGeminiKey, setUserGeminiKey] = useStorage<string>(
+    "userGeminiKey",
+    ""
+  )
+  const [showKeyInput, setShowKeyInput] = useState(false)
+  const [showKey, setShowKey] = useState(false)
+
   const [isExtensionEnabled, setIsExtensionEnabled] = useStorage<boolean>(
     "isExtensionEnabled",
     (v) => (v === undefined ? true : v)
@@ -210,6 +217,47 @@ export default function IndexPopup() {
               )}
             </div>
           </div>
+
+          {/* Gemini Key Section */}
+          {apiMode === "gemini" && (
+            <div className="mt-2 p-2 rounded-xl bg-gradient-to-br from-white/5 to-white/2 ring-1 ring-purple-500/20 backdrop-blur-sm transition-all duration-300">
+              {userGeminiKey ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-green-300 flex items-center gap-1">
+                    <FiCheck className="text-green-400" /> Gemini key saved
+                  </span>
+                  <button
+                    onClick={() => setShowKeyInput(!showKeyInput)}
+                    className="text-[11px] text-cyan-300 hover:underline">
+                    {showKeyInput ? "Hide" : "Change"}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowKeyInput(true)}
+                  className="text-xs text-cyan-300 hover:underline">
+                  + Add Gemini API Key (optional)
+                </button>
+              )}
+
+              {showKeyInput && (
+                <div className="mt-2 flex items-center gap-1">
+                  <input
+                    type={showKey ? "text" : "password"}
+                    placeholder="Enter your Gemini key"
+                    className="w-full p-1 text-xs rounded bg-black/30 text-white ring-1 ring-cyan-500/30 focus:ring-cyan-400 outline-none"
+                    value={userGeminiKey}
+                    onChange={(e) => setUserGeminiKey(e.target.value.trim())}
+                  />
+                  <button
+                    onClick={() => setShowKey(!showKey)}
+                    className="text-cyan-300 hover:text-white transition">
+                    {showKey ? <FiEyeOff /> : <FiEye />}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Response Style */}
           <div
